@@ -6,7 +6,7 @@ Built with Swift 6 and SwiftUI. Requires macOS 14 (Sonoma) or later.
 
 ## How it works
 
-Barman sits in your menu bar and uses macOS Accessibility APIs to detect items from other apps. You can choose which items to always show, hide, or move into a collapsible "Barman bar". Hidden items are moved off-screen using private CoreGraphics APIs (same approach as Bartender).
+Barman sits in your menu bar and uses macOS Accessibility APIs to detect items from other apps. You can choose which items to always show, hide, or move into a collapsible "Barman bar". Hidden items are pushed off-screen by expanding a divider status item (same approach as Dozer and Hidden Bar).
 
 ## Build
 

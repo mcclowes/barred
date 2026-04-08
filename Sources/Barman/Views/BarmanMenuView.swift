@@ -1,11 +1,14 @@
 import SwiftUI
 
 struct BarmanMenuView: View {
-    @Environment(MenuBarController.self) private var controller
+    @State private var controller = MenuBarController.shared
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Button(action: { controller.toggleBarmanBar() }) {
+            Button(action: {
+                controller.toggleBarmanBar()
+            }) {
                 Label(
                     controller.isBarmanBarVisible ? "Hide Barman bar" : "Show Barman bar",
                     systemImage: controller.isBarmanBarVisible ? "eye.slash" : "eye"
@@ -29,18 +32,23 @@ struct BarmanMenuView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
+            Text("⌘+drag a menu bar icon to move it out of hidden")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+
             Divider()
 
-            Button(action: {
-                (NSApp.delegate as? AppDelegate)?.openSettings()
-            }) {
+            SettingsLink {
                 Label("Settings...", systemImage: "gear")
             }
             .buttonStyle(.plain)
 
             Divider()
 
-            Button(action: { NSApplication.shared.terminate(nil) }) {
+            Button(action: {
+                controller.restoreAll()
+                NSApplication.shared.terminate(nil)
+            }) {
                 Label("Quit Barman", systemImage: "xmark.circle")
             }
             .buttonStyle(.plain)

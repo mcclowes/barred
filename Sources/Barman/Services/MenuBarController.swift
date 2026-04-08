@@ -10,7 +10,8 @@ final class MenuBarController {
     let preferencesStore = PreferencesStore()
     let sectionDivider = SectionDivider()
     private(set) var isBarmanBarVisible = false
-    private var autoHideTimer: Timer?
+    private var autoHideTask: Task<Void, Never>?
+    private var isTransitioning = false
 
     var detectedItems: [MenuBarItem] {
         detector?.detectedItems ?? []
@@ -26,52 +27,58 @@ final class MenuBarController {
         detector.startScanning()
 
         // Hide the section after first scan
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
-            self?.hideSection()
+        Task {
+            try? await Task.sleep(for: .seconds(1))
+            hideSection()
         }
     }
 
     func toggleBarmanBar() {
+        guard !isTransitioning else { return }
+
         isBarmanBarVisible.toggle()
 
         if isBarmanBarVisible {
             showSection()
             scheduleAutoHide()
         } else {
-            hideSection()
             cancelAutoHide()
+            hideSection()
         }
     }
 
     func restoreAll() {
+        cancelAutoHide()
         sectionDivider.collapse()
     }
 
     // MARK: - Private
 
     private func hideSection() {
+        isTransitioning = true
         sectionDivider.expand()
+        isTransitioning = false
     }
 
     private func showSection() {
+        isTransitioning = true
         sectionDivider.collapse()
+        isTransitioning = false
     }
 
     private func scheduleAutoHide() {
         cancelAutoHide()
-        autoHideTimer = Timer.scheduledTimer(
-            withTimeInterval: preferences.autoHideDelay,
-            repeats: false
-        ) { [weak self] _ in
-            Task { @MainActor in
-                self?.isBarmanBarVisible = false
-                self?.hideSection()
-            }
+        let delay = preferences.autoHideDelay
+        autoHideTask = Task {
+            try? await Task.sleep(for: .seconds(delay))
+            guard !Task.isCancelled else { return }
+            isBarmanBarVisible = false
+            hideSection()
         }
     }
 
     private func cancelAutoHide() {
-        autoHideTimer?.invalidate()
-        autoHideTimer = nil
+        autoHideTask?.cancel()
+        autoHideTask = nil
     }
 }

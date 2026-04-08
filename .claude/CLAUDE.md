@@ -20,10 +20,10 @@ swift build -c release   # release build
 ## Architecture
 
 - `BarmanApp.swift` — app entry point
-- `Services/` — core logic (AccessibilityService, MenuBarDetector, MenuBarController, PreferencesStore)
-- `Models/` — data types (MenuBarItem, ItemVisibility, UserPreferences)
+- `Services/` — core logic (AccessibilityService, MenuBarDetector, MenuBarController, PreferencesStore, SectionDivider)
+- `Models/` — data types (MenuBarItem, UserPreferences)
 - `Views/` — SwiftUI views (BarmanMenuView, SettingsView, OnboardingView, MenuBarItemRow)
-- `Utilities/` — helpers (AXExtensions, OverlayWindow, WindowMover)
+- `Utilities/` — helpers (AXExtensions, OverlayWindow)
 
 ## Notes
 
