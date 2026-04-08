@@ -10,12 +10,13 @@ Barman sits in your menu bar and uses macOS Accessibility APIs to detect items f
 
 ## Build
 
-Requires Xcode 16+ (Swift 6 toolchain).
+Requires Xcode 16+ (Swift 6 toolchain) and [xcodegen](https://github.com/yonaskolb/XcodeGen).
 
 ```bash
-swift build                # debug build
-./Scripts/build-app.sh     # build .app bundle to .build/Barman.app
-open .build/Barman.app     # run it
+make build                 # debug build
+make app                   # build .app bundle
+make run                   # build and run
+make test                  # run tests
 ```
 
 ## Setup

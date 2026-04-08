@@ -6,15 +6,18 @@ macOS menu bar manager — detects and manages menu bar items from other apps us
 
 - Swift 6, SwiftUI
 - macOS 14+ (Sonoma)
-- Swift Package Manager (no Xcode project)
+- Xcode project via xcodegen (`project.yml` → `Barman.xcodeproj`)
 - LSUIElement app (no dock icon)
 
 ## Build
 
 ```bash
-swift build              # debug build
-swift build -c release   # release build
-./Scripts/build-app.sh   # build .app bundle to .build/Barman.app
+make build               # debug build (xcodebuild)
+make release             # release build
+make app                 # build .app bundle via Scripts/build-app.sh
+make run                 # build and run
+make test                # run tests
+make xcode               # regenerate Xcode project from project.yml
 ```
 
 ## Architecture
@@ -28,4 +31,4 @@ swift build -c release   # release build
 ## Notes
 
 - Requires Accessibility permission (System Settings > Privacy & Security > Accessibility)
-- No tests yet
+- Tests in `Tests/BarmanTests/` (run with `make test`)
