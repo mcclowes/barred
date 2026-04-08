@@ -6,7 +6,7 @@ import Foundation
 /// left off-screen — the same technique used by Dozer and Hidden Bar.
 @MainActor
 final class SectionDivider {
-    private let statusItem: NSStatusItem
+    private var statusItem: NSStatusItem?
     private var isExpanded = false
 
     /// The collapsed length — a small dot visible as a section separator.
@@ -20,10 +20,13 @@ final class SectionDivider {
         return max(500, min(screenWidth + 200, 4000))
     }
 
-    init() {
-        statusItem = NSStatusBar.system.statusItem(withLength: Self.collapsedLength)
+    /// Create the divider status item. Must be called AFTER the main Barman
+    /// status item exists, so the divider appears to its left.
+    func setUp() {
+        guard statusItem == nil else { return }
+        let item = NSStatusBar.system.statusItem(withLength: Self.collapsedLength)
 
-        if let button = statusItem.button {
+        if let button = item.button {
             button.image = NSImage(
                 systemSymbolName: "line.vertical",
                 accessibilityDescription: "Barman section divider"
@@ -33,11 +36,13 @@ final class SectionDivider {
             button.action = #selector(AppDelegate.toggleBarmanBarFromDivider)
             button.sendAction(on: [.leftMouseUp])
         }
+
+        statusItem = item
     }
 
     /// Expand the divider to push items to its left off-screen.
     func expand() {
-        guard !isExpanded else { return }
+        guard let statusItem, !isExpanded else { return }
         isExpanded = true
         statusItem.length = expandedLength
         if let button = statusItem.button {
@@ -47,7 +52,7 @@ final class SectionDivider {
 
     /// Collapse the divider to reveal hidden items.
     func collapse() {
-        guard isExpanded else { return }
+        guard let statusItem, isExpanded else { return }
         isExpanded = false
         statusItem.length = Self.collapsedLength
         if let button = statusItem.button {

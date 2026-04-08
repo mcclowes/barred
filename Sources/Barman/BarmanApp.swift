@@ -19,6 +19,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             )
         }
 
+        // Create the divider AFTER the Barman icon so it appears to its left
+        controller.sectionDivider.setUp()
+
         buildMenu()
     }
 
