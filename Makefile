@@ -1,22 +1,29 @@
-.PHONY: build release app run test clean help
+SCHEME = Barman
+PROJECT = Barman.xcodeproj
+BUILD_DIR = $(shell xcodebuild -project $(PROJECT) -scheme $(SCHEME) -showBuildSettings 2>/dev/null | grep -m1 'BUILT_PRODUCTS_DIR' | awk '{print $$NF}')
+
+.PHONY: build release app run test clean xcode help
 
 build: ## Debug build
-	swift build
+	xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration Debug build
 
 release: ## Release build
-	swift build -c release
+	xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration Release build
 
-app: ## Build .app bundle
+app: ## Build .app bundle (signed, notarizable)
 	./Scripts/build-app.sh
 
-test: ## Run tests
-	swift test
+run: build ## Build and run
+	open "$(BUILD_DIR)/Barman.app"
 
-run: app ## Build and open .app bundle
-	open .build/Barman.app
+test: ## Run tests
+	xcodebuild -project $(PROJECT) -scheme BarmanTests -configuration Debug test
+
+xcode: ## Regenerate Xcode project from project.yml
+	xcodegen generate
 
 clean: ## Remove build artifacts
-	swift package clean
+	xcodebuild -project $(PROJECT) -scheme $(SCHEME) clean
 	rm -rf .build/Barman.app
 
 help: ## Show available targets
