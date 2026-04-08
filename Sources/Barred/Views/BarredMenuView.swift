@@ -1,17 +1,17 @@
 import SwiftUI
 
-struct BarmanMenuView: View {
+struct BarredMenuView: View {
     @State private var controller = MenuBarController.shared
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Button(action: {
-                controller.toggleBarmanBar()
+                controller.toggleBarredBar()
             }) {
                 Label(
-                    controller.isBarmanBarVisible ? "Hide Barman bar" : "Show Barman bar",
-                    systemImage: controller.isBarmanBarVisible ? "eye.slash" : "eye"
+                    controller.isBarredBarVisible ? "Hide Barred bar" : "Show Barred bar",
+                    systemImage: controller.isBarredBarVisible ? "eye.slash" : "eye"
                 )
             }
             .buttonStyle(.plain)
@@ -49,7 +49,7 @@ struct BarmanMenuView: View {
                 controller.restoreAll()
                 NSApplication.shared.terminate(nil)
             }) {
-                Label("Quit Barman", systemImage: "xmark.circle")
+                Label("Quit Barred", systemImage: "xmark.circle")
             }
             .buttonStyle(.plain)
         }

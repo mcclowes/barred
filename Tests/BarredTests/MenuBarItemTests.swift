@@ -1,6 +1,6 @@
 import Darwin
 import Testing
-@testable import Barman
+@testable import Barred
 
 @Suite("MenuBarItem")
 struct MenuBarItemTests {

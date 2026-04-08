@@ -3,22 +3,22 @@
 import PackageDescription
 
 let package = Package(
-    name: "Barman",
+    name: "Barred",
     platforms: [
         .macOS(.v14)
     ],
     targets: [
         .executableTarget(
-            name: "Barman",
-            path: "Sources/Barman",
+            name: "Barred",
+            path: "Sources/Barred",
             swiftSettings: [
                 .enableExperimentalFeature("StrictConcurrency=complete")
             ]
         ),
         .testTarget(
-            name: "BarmanTests",
-            dependencies: ["Barman"],
-            path: "Tests/BarmanTests",
+            name: "BarredTests",
+            dependencies: ["Barred"],
+            path: "Tests/BarredTests",
             swiftSettings: [
                 .enableExperimentalFeature("StrictConcurrency=complete")
             ]

@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import Barman
+@testable import Barred
 
 @Suite("UserPreferences")
 struct UserPreferencesTests {
@@ -8,7 +8,7 @@ struct UserPreferencesTests {
     func defaults() {
         let prefs = UserPreferences()
         #expect(prefs.autoHideDelay == 5.0)
-        #expect(prefs.showBarmanBarOnClick == true)
+        #expect(prefs.showBarredBarOnClick == true)
         #expect(prefs.launchAtLogin == false)
     }
 
@@ -16,14 +16,14 @@ struct UserPreferencesTests {
     func codableRoundTrip() throws {
         var prefs = UserPreferences()
         prefs.autoHideDelay = 10.0
-        prefs.showBarmanBarOnClick = false
+        prefs.showBarredBarOnClick = false
         prefs.launchAtLogin = true
 
         let data = try JSONEncoder().encode(prefs)
         let decoded = try JSONDecoder().decode(UserPreferences.self, from: data)
 
         #expect(decoded.autoHideDelay == 10.0)
-        #expect(decoded.showBarmanBarOnClick == false)
+        #expect(decoded.showBarredBarOnClick == false)
         #expect(decoded.launchAtLogin == true)
     }
 
@@ -33,7 +33,7 @@ struct UserPreferencesTests {
         let decoded = try JSONDecoder().decode(UserPreferences.self, from: json)
 
         #expect(decoded.autoHideDelay == 5.0)
-        #expect(decoded.showBarmanBarOnClick == true)
+        #expect(decoded.showBarredBarOnClick == true)
         #expect(decoded.launchAtLogin == false)
     }
 }

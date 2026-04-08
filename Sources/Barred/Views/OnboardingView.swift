@@ -12,7 +12,7 @@ struct OnboardingView: View {
             Text("Accessibility access required")
                 .font(.headline)
 
-            Text("Barman needs accessibility access to detect and manage menu bar items from other apps.")
+            Text("Barred needs accessibility access to detect and manage menu bar items from other apps.")
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
 

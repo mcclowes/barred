@@ -1,4 +1,4 @@
-# Barman
+# Barred
 
 macOS menu bar manager — detects and manages menu bar items from other apps using Accessibility APIs.
 
@@ -6,7 +6,7 @@ macOS menu bar manager — detects and manages menu bar items from other apps us
 
 - Swift 6, SwiftUI
 - macOS 14+ (Sonoma)
-- Xcode project via xcodegen (`project.yml` → `Barman.xcodeproj`)
+- Xcode project via xcodegen (`project.yml` → `Barred.xcodeproj`)
 - LSUIElement app (no dock icon)
 
 ## Build
@@ -22,13 +22,13 @@ make xcode               # regenerate Xcode project from project.yml
 
 ## Architecture
 
-- `BarmanApp.swift` — app entry point
+- `BarredApp.swift` — app entry point
 - `Services/` — core logic (AccessibilityService, MenuBarDetector, MenuBarController, PreferencesStore, SectionDivider)
 - `Models/` — data types (MenuBarItem, UserPreferences)
-- `Views/` — SwiftUI views (BarmanMenuView, SettingsView, OnboardingView, MenuBarItemRow)
+- `Views/` — SwiftUI views (BarredMenuView, SettingsView, OnboardingView, MenuBarItemRow)
 - `Utilities/` — helpers (AXExtensions, OverlayWindow)
 
 ## Notes
 
 - Requires Accessibility permission (System Settings > Privacy & Security > Accessibility)
-- Tests in `Tests/BarmanTests/` (run with `make test`)
+- Tests in `Tests/BarredTests/` (run with `make test`)

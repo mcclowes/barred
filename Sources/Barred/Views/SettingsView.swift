@@ -58,7 +58,7 @@ struct ItemsSettingsView: View {
                 )
             } else {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("⌘-drag menu bar icons to rearrange them. Items to the left of the Barman divider (|) will be hidden.")
+                    Text("⌘-drag menu bar icons to rearrange them. Items to the left of the Barred divider (|) will be hidden.")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 4)
@@ -113,10 +113,10 @@ struct GeneralSettingsView: View {
                 }
             ))
 
-            Toggle("Show Barman bar on click", isOn: Binding(
-                get: { controller.preferences.showBarmanBarOnClick },
+            Toggle("Show Barred bar on click", isOn: Binding(
+                get: { controller.preferences.showBarredBarOnClick },
                 set: { newValue in
-                    controller.preferences.showBarmanBarOnClick = newValue
+                    controller.preferences.showBarredBarOnClick = newValue
                     controller.preferencesStore.save()
                 }
             ))
@@ -150,7 +150,7 @@ struct AboutView: View {
                 .font(.system(size: 48))
                 .foregroundStyle(.tint)
 
-            Text("Barman")
+            Text("Barred")
                 .font(.title)
                 .fontWeight(.bold)
 

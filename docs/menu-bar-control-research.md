@@ -52,7 +52,7 @@ This enables per-item control without user interaction but requires private CGS 
 
 **Reference:** [Ice](https://github.com/jordanbaird/Ice) — `MenuBarItemManager.swift`, `Bridging/Shims/Private.swift`
 
-### 3. AXUIElement position manipulation (Barman's current approach)
+### 3. AXUIElement position manipulation (Barred's current approach)
 
 Setting `kAXPositionAttribute` to move items off-screen (x: -10000).
 
@@ -166,7 +166,7 @@ The `NSStatusItem.length` expansion technique **still works on Tahoe**, with cav
 | **Ice** | Stalled | 50+ open Tahoe issues, development appears inactive |
 | **Dozer** | Unmaintained | Crashes on Tahoe (EXC_BAD_INSTRUCTION), runs under Rosetta |
 
-## Future-proofing strategy for Barman
+## Future-proofing strategy for Barred
 
 ### API safety tiers
 

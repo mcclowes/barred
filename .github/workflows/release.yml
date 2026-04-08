@@ -60,28 +60,28 @@ jobs:
 
       - name: Get SHA256
         run: |
-          SHA=$(shasum -a 256 .build/Barman.zip | awk '{print $1}')
+          SHA=$(shasum -a 256 .build/Barred.zip | awk '{print $1}')
           echo "SHA256=$SHA" >> $GITHUB_ENV
           echo "SHA256: $SHA"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: Barman v${{ env.VERSION }}
+          name: Barred v${{ env.VERSION }}
           body: |
-            ## Barman v${{ env.VERSION }}
+            ## Barred v${{ env.VERSION }}
 
             ### Install via Homebrew
             ```bash
-            brew tap mcclowes/barman
-            brew install --cask barman
+            brew tap mcclowes/barred
+            brew install --cask barred
             ```
 
             ### Manual install
-            Download `Barman.zip`, extract, and move `Barman.app` to `/Applications`.
+            Download `Barred.zip`, extract, and move `Barred.app` to `/Applications`.
 
             **SHA256:** `${{ env.SHA256 }}`
-          files: .build/Barman.zip
+          files: .build/Barred.zip
           draft: false
           prerelease: false
 
@@ -90,35 +90,35 @@ jobs:
         env:
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
-          git clone https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/mcclowes/homebrew-barman.git $RUNNER_TEMP/homebrew-barman
+          git clone https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/mcclowes/homebrew-barred.git $RUNNER_TEMP/homebrew-barred
 
-          cat > $RUNNER_TEMP/homebrew-barman/Casks/barman.rb << 'CASK'
-          cask "barman" do
+          cat > $RUNNER_TEMP/homebrew-barred/Casks/barred.rb << 'CASK'
+          cask "barred" do
             version "VERSION_PLACEHOLDER"
             sha256 "SHA_PLACEHOLDER"
 
-            url "https://github.com/mcclowes/barman/releases/download/v#{version}/Barman.zip"
-            name "Barman"
+            url "https://github.com/mcclowes/barred/releases/download/v#{version}/Barred.zip"
+            name "Barred"
             desc "macOS menu bar manager"
-            homepage "https://github.com/mcclowes/barman"
+            homepage "https://github.com/mcclowes/barred"
 
             depends_on macos: ">= :sonoma"
 
-            app "Barman.app"
+            app "Barred.app"
 
             zap trash: [
-              "~/Library/Preferences/com.barman.app.plist",
+              "~/Library/Preferences/com.barred.app.plist",
             ]
           end
           CASK
 
           # Replace placeholders
-          sed -i '' "s/VERSION_PLACEHOLDER/$VERSION/" $RUNNER_TEMP/homebrew-barman/Casks/barman.rb
-          sed -i '' "s/SHA_PLACEHOLDER/$SHA256/" $RUNNER_TEMP/homebrew-barman/Casks/barman.rb
+          sed -i '' "s/VERSION_PLACEHOLDER/$VERSION/" $RUNNER_TEMP/homebrew-barred/Casks/barred.rb
+          sed -i '' "s/SHA_PLACEHOLDER/$SHA256/" $RUNNER_TEMP/homebrew-barred/Casks/barred.rb
 
-          cd $RUNNER_TEMP/homebrew-barman
+          cd $RUNNER_TEMP/homebrew-barred
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Casks/barman.rb
-          git commit -m "Update barman to v$VERSION"
+          git add Casks/barred.rb
+          git commit -m "Update barred to v$VERSION"
           git push

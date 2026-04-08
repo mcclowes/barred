@@ -2,23 +2,23 @@ import Foundation
 
 struct UserPreferences: Codable {
     var autoHideDelay: TimeInterval = 5.0
-    var showBarmanBarOnClick: Bool = true
+    var showBarredBarOnClick: Bool = true
     var launchAtLogin: Bool = false
 
     init(
         autoHideDelay: TimeInterval = 5.0,
-        showBarmanBarOnClick: Bool = true,
+        showBarredBarOnClick: Bool = true,
         launchAtLogin: Bool = false
     ) {
         self.autoHideDelay = autoHideDelay
-        self.showBarmanBarOnClick = showBarmanBarOnClick
+        self.showBarredBarOnClick = showBarredBarOnClick
         self.launchAtLogin = launchAtLogin
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         autoHideDelay = try container.decodeIfPresent(TimeInterval.self, forKey: .autoHideDelay) ?? 5.0
-        showBarmanBarOnClick = try container.decodeIfPresent(Bool.self, forKey: .showBarmanBarOnClick) ?? true
+        showBarredBarOnClick = try container.decodeIfPresent(Bool.self, forKey: .showBarredBarOnClick) ?? true
         launchAtLogin = try container.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? false
     }
 }

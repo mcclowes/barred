@@ -2,7 +2,7 @@ import Foundation
 
 @Observable
 final class PreferencesStore {
-    private static let key = "com.barman.preferences"
+    private static let key = "com.barred.preferences"
     var preferences: UserPreferences
 
     init() {

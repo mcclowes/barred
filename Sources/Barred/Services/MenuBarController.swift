@@ -9,7 +9,7 @@ final class MenuBarController {
     private(set) var detector: MenuBarDetector!
     let preferencesStore = PreferencesStore()
     let sectionDivider = SectionDivider()
-    private(set) var isBarmanBarVisible = false
+    private(set) var isBarredBarVisible = false
     private var autoHideTask: Task<Void, Never>?
     private var isTransitioning = false
 
@@ -33,12 +33,12 @@ final class MenuBarController {
         }
     }
 
-    func toggleBarmanBar() {
+    func toggleBarredBar() {
         guard !isTransitioning else { return }
 
-        isBarmanBarVisible.toggle()
+        isBarredBarVisible.toggle()
 
-        if isBarmanBarVisible {
+        if isBarredBarVisible {
             showSection()
             scheduleAutoHide()
         } else {
@@ -72,7 +72,7 @@ final class MenuBarController {
         autoHideTask = Task {
             try? await Task.sleep(for: .seconds(delay))
             guard !Task.isCancelled else { return }
-            isBarmanBarVisible = false
+            isBarredBarVisible = false
             hideSection()
         }
     }

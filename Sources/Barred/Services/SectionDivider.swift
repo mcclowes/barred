@@ -20,7 +20,7 @@ final class SectionDivider {
         return max(500, min(screenWidth + 200, 4000))
     }
 
-    /// Create the divider status item. Must be called AFTER the main Barman
+    /// Create the divider status item. Must be called AFTER the main Barred
     /// status item exists, so the divider appears to its left.
     func setUp() {
         guard statusItem == nil else { return }
@@ -29,11 +29,11 @@ final class SectionDivider {
         if let button = item.button {
             button.image = NSImage(
                 systemSymbolName: "line.vertical",
-                accessibilityDescription: "Barman section divider"
+                accessibilityDescription: "Barred section divider"
             )
             button.image?.size = NSSize(width: 6, height: 16)
             button.imagePosition = .imageOnly
-            button.action = #selector(AppDelegate.toggleBarmanBarFromDivider)
+            button.action = #selector(AppDelegate.toggleBarredBarFromDivider)
             button.sendAction(on: [.leftMouseUp])
         }
 
@@ -58,7 +58,7 @@ final class SectionDivider {
         if let button = statusItem.button {
             button.image = NSImage(
                 systemSymbolName: "line.vertical",
-                accessibilityDescription: "Barman section divider"
+                accessibilityDescription: "Barred section divider"
             )
             button.image?.size = NSSize(width: 6, height: 16)
         }

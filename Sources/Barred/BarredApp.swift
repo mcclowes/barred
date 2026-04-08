@@ -10,12 +10,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
 
-        // Create the main Barman status item
+        // Create the main Barred status item
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem.button {
             button.image = NSImage(
                 systemSymbolName: "rectangle.topthird.inset.filled",
-                accessibilityDescription: "Barman"
+                accessibilityDescription: "Barred"
             )
             button.action = #selector(statusItemClicked(_:))
             button.target = self
@@ -26,7 +26,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         popover = NSPopover()
         popover.contentSize = NSSize(width: 240, height: 200)
         popover.behavior = .transient
-        popover.contentViewController = NSHostingController(rootView: BarmanMenuView())
+        popover.contentViewController = NSHostingController(rootView: BarredMenuView())
 
         // Create the divider status item for the expand/collapse trick
         controller.sectionDivider.setUp()
@@ -43,11 +43,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         controller.accessibilityService.checkTrust()
         if !controller.accessibilityService.isTrusted {
-            print("[Barman] AXIsProcessTrusted = false, requesting trust")
+            print("[Barred] AXIsProcessTrusted = false, requesting trust")
             controller.accessibilityService.requestTrust()
         }
 
-        controller.toggleBarmanBar()
+        controller.toggleBarredBar()
     }
 
     private func togglePopover(_ sender: NSStatusBarButton) {
@@ -59,8 +59,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    @objc func toggleBarmanBarFromDivider() {
-        controller.toggleBarmanBar()
+    @objc func toggleBarredBarFromDivider() {
+        controller.toggleBarredBar()
     }
 
     @objc private func quitApp() {
@@ -74,7 +74,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 @main
-struct BarmanApp: App {
+struct BarredApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {

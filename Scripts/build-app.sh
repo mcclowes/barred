@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 BUILD_DIR="$PROJECT_DIR/.build"
-APP_NAME="Barman"
+APP_NAME="Barred"
 APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
 ZIP_PATH="$BUILD_DIR/$APP_NAME.zip"
 
@@ -24,7 +24,7 @@ mkdir -p "$APP_BUNDLE/Contents/MacOS"
 mkdir -p "$APP_BUNDLE/Contents/Resources"
 
 # Copy executable
-cp "$BUILD_DIR/release/Barman" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
+cp "$BUILD_DIR/release/Barred" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 
 # Copy Info.plist
 cp "$PROJECT_DIR/Resources/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
@@ -37,11 +37,11 @@ fi
 # Create PkgInfo
 echo -n "APPL????" > "$APP_BUNDLE/Contents/PkgInfo"
 
-# Code signing — use CODESIGN_IDENTITY env var, or fall back to "Barman Dev" local cert, then ad-hoc
+# Code signing — use CODESIGN_IDENTITY env var, or fall back to "Barred Dev" local cert, then ad-hoc
 SIGN_IDENTITY="${CODESIGN_IDENTITY:-${DEVELOPER_ID_APPLICATION:-}}"
 
-if [ -z "$SIGN_IDENTITY" ] && security find-identity -v -p codesigning | grep -q "Barman Dev"; then
-    SIGN_IDENTITY="Barman Dev"
+if [ -z "$SIGN_IDENTITY" ] && security find-identity -v -p codesigning | grep -q "Barred Dev"; then
+    SIGN_IDENTITY="Barred Dev"
 fi
 
 if [ -n "$SIGN_IDENTITY" ]; then
@@ -51,7 +51,7 @@ if [ -n "$SIGN_IDENTITY" ]; then
     codesign --verify --deep --strict "$APP_BUNDLE"
 else
     echo "Warning: No signing identity found. Using ad-hoc signing (permissions may reset on rebuild)."
-    echo "  Create a local cert named 'Barman Dev' in Keychain Access to fix this."
+    echo "  Create a local cert named 'Barred Dev' in Keychain Access to fix this."
     codesign --force --deep --sign - "$APP_BUNDLE"
 fi
 

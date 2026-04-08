@@ -1,10 +1,10 @@
-# Publishing Barman via Homebrew
+# Publishing Barred via Homebrew
 
 Users install with:
 
 ```bash
-brew tap mcclowes/barman
-brew install --cask barman
+brew tap mcclowes/barred
+brew install --cask barred
 ```
 
 ## Setup
@@ -12,14 +12,14 @@ brew install --cask barman
 ### 1. Create the tap repo
 
 ```bash
-gh repo create mcclowes/homebrew-barman --public --clone
-cp Casks/barman.rb homebrew-barman/Casks/barman.rb
-cd homebrew-barman && git add . && git commit -m "Add barman cask" && git push
+gh repo create mcclowes/homebrew-barred --public --clone
+cp Casks/barred.rb homebrew-barred/Casks/barred.rb
+cd homebrew-barred && git add . && git commit -m "Add barred cask" && git push
 ```
 
 ### 2. Add GitHub secrets
 
-Add these to the `barman` repo (Settings > Secrets and variables > Actions):
+Add these to the `barred` repo (Settings > Secrets and variables > Actions):
 
 | Secret | Description |
 |---|---|
@@ -29,9 +29,9 @@ Add these to the `barman` repo (Settings > Secrets and variables > Actions):
 | `APPLE_ID` | Your Apple ID email |
 | `APPLE_ID_PASSWORD` | App-specific password — generate at [appleid.apple.com](https://appleid.apple.com) > Sign-In and Security > App-Specific Passwords |
 | `APPLE_TEAM_ID` | Your 10-character team ID (visible in Apple Developer portal) |
-| `HOMEBREW_TAP_TOKEN` | A GitHub personal access token with push access to `mcclowes/homebrew-barman` |
+| `HOMEBREW_TAP_TOKEN` | A GitHub personal access token with push access to `mcclowes/homebrew-barred` |
 
-All signing/notarization secrets are optional. Without them, the release still works but produces an unsigned build (users must run `xattr -cr /Applications/Barman.app` after install).
+All signing/notarization secrets are optional. Without them, the release still works but produces an unsigned build (users must run `xattr -cr /Applications/Barred.app` after install).
 
 ### 3. Create a release
 
@@ -44,8 +44,8 @@ The GitHub Actions workflow (`.github/workflows/release.yml`) will automatically
 
 1. Build the app on a macOS runner
 2. Sign and notarize (if secrets are configured)
-3. Create a GitHub Release with `Barman.zip`
-4. Update the cask SHA and version in `homebrew-barman` (if `HOMEBREW_TAP_TOKEN` is set)
+3. Create a GitHub Release with `Barred.zip`
+4. Update the cask SHA and version in `homebrew-barred` (if `HOMEBREW_TAP_TOKEN` is set)
 
 ## Getting a Developer ID certificate
 
