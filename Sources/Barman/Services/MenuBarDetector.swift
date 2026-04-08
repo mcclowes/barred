@@ -36,29 +36,35 @@ final class MenuBarDetector {
             items = detectViaWindowList()
         }
 
-        // Deduplicate across screens — same app+title appearing on multiple monitors
         items = deduplicateAcrossScreens(items)
 
         if detectedItems.count != items.count || detectedItems.map(\.displayName) != items.map(\.displayName) {
             print("[Barman] Detected \(items.count) menu bar items:")
             for item in items {
-                print("  - \(item.displayName) [\(item.appName)] (x: \(Int(item.frame.origin.x)))")
+                print("  - \(item.displayName) [\(item.appName)] (wid: \(item.windowID), x: \(Int(item.frame.origin.x)))")
             }
         }
 
         detectedItems = items
     }
 
-    // MARK: - AX-based detection (primary, more accurate)
+    // MARK: - AX-based detection enriched with window IDs
 
     private func detectViaAccessibility() -> [MenuBarItem] {
         let axItems = accessibilityService.enumerateAllExtrasItems()
+        let windowMap = menuBarWindowMap()
 
         return axItems.compactMap { axItem -> MenuBarItem? in
-            // Filter out untitled Control Centre items — these are spacers/separators/background
+            // Filter out untitled Control Centre items (spacers/separators)
             if axItem.bundleIdentifier == "com.apple.controlcenter" && axItem.title == nil {
                 return nil
             }
+
+            // Match AX item to a CGWindowList window by PID + position overlap
+            let windowID = findWindowID(
+                for: axItem,
+                in: windowMap
+            )
 
             return MenuBarItem(
                 id: "\(axItem.pid)-\(axItem.indexInApp)",
@@ -66,17 +72,24 @@ final class MenuBarDetector {
                 appName: axItem.appName,
                 bundleIdentifier: axItem.bundleIdentifier,
                 title: axItem.title,
-                windowID: 0,
+                windowID: windowID,
                 frame: axItem.frame ?? .zero,
-                itemIndex: axItem.indexInApp
+                itemIndex: axItem.indexInApp,
+                axElement: axItem.element
             )
         }
         .sorted { $0.frame.origin.x < $1.frame.origin.x }
     }
 
-    // MARK: - CGWindowList fallback (when AX not available)
+    // MARK: - CGWindowList for window IDs
 
-    private func detectViaWindowList() -> [MenuBarItem] {
+    private struct WindowInfo {
+        let windowID: CGWindowID
+        let pid: pid_t
+        let frame: CGRect
+    }
+
+    private func menuBarWindowMap() -> [WindowInfo] {
         guard let windowList = CGWindowListCopyWindowInfo(
             [.optionOnScreenOnly, .excludeDesktopElements],
             kCGNullWindowID
@@ -84,14 +97,11 @@ final class MenuBarDetector {
             return []
         }
 
-        var itemIndex: [Int32: Int] = [:]
-
-        return windowList.compactMap { info -> MenuBarItem? in
+        return windowList.compactMap { info -> WindowInfo? in
             guard let layer = info[kCGWindowLayer as String] as? Int,
                   layer == 25,
                   let boundsDict = info[kCGWindowBounds as String] as? [String: Any],
-                  let ownerPID = info[kCGWindowOwnerPID as String] as? Int32,
-                  let ownerName = info[kCGWindowOwnerName as String] as? String
+                  let ownerPID = info[kCGWindowOwnerPID as String] as? Int32
             else { return nil }
 
             let x = (boundsDict["X"] as? NSNumber)?.doubleValue ?? 0
@@ -103,22 +113,53 @@ final class MenuBarDetector {
             guard width > 0, width < 200, height > 0 else { return nil }
 
             let windowID = (info[kCGWindowNumber as String] as? NSNumber)?.uint32Value ?? 0
-            let app = NSRunningApplication(processIdentifier: ownerPID)
-            let bundleID = app?.bundleIdentifier
-            let windowName = info[kCGWindowName as String] as? String
 
-            let index = itemIndex[ownerPID, default: 0]
-            itemIndex[ownerPID] = index + 1
+            return WindowInfo(windowID: windowID, pid: ownerPID, frame: frame)
+        }
+    }
+
+    private func findWindowID(for axItem: AXMenuBarItemInfo, in windows: [WindowInfo]) -> CGWindowID {
+        guard let axFrame = axItem.frame else { return 0 }
+
+        // Find the window with matching PID and closest position
+        var bestMatch: CGWindowID = 0
+        var bestDistance: CGFloat = .greatestFiniteMagnitude
+
+        for window in windows where window.pid == axItem.pid {
+            let dx = abs(window.frame.origin.x - axFrame.origin.x)
+            let dy = abs(window.frame.origin.y - axFrame.origin.y)
+            let distance = dx + dy
+
+            if distance < bestDistance {
+                bestDistance = distance
+                bestMatch = window.windowID
+            }
+        }
+
+        return bestMatch
+    }
+
+    // MARK: - CGWindowList fallback
+
+    private func detectViaWindowList() -> [MenuBarItem] {
+        let windows = menuBarWindowMap()
+        var itemIndex: [Int32: Int] = [:]
+
+        return windows.map { window in
+            let app = NSRunningApplication(processIdentifier: window.pid)
+            let index = itemIndex[window.pid, default: 0]
+            itemIndex[window.pid] = index + 1
 
             return MenuBarItem(
-                id: "\(ownerPID)-\(windowID)",
-                pid: ownerPID,
-                appName: ownerName,
-                bundleIdentifier: bundleID,
-                title: windowName,
-                windowID: windowID,
-                frame: frame,
-                itemIndex: index
+                id: "\(window.pid)-\(window.windowID)",
+                pid: window.pid,
+                appName: app?.localizedName ?? "Unknown",
+                bundleIdentifier: app?.bundleIdentifier,
+                title: nil,
+                windowID: window.windowID,
+                frame: window.frame,
+                itemIndex: index,
+                axElement: nil
             )
         }
         .sorted { $0.frame.origin.x < $1.frame.origin.x }
@@ -126,13 +167,10 @@ final class MenuBarDetector {
 
     // MARK: - Deduplication
 
-    /// Menu bar items appear on every screen. Keep only one instance of each
-    /// unique item (by app + title), preferring the one on the primary screen.
     private func deduplicateAcrossScreens(_ items: [MenuBarItem]) -> [MenuBarItem] {
         var seen = Set<String>()
         var result: [MenuBarItem] = []
 
-        // Sort so primary screen items (x >= 0 on typical setups) come first
         let primaryFirst = items.sorted { a, b in
             let aOnPrimary = a.frame.origin.x >= 0
             let bOnPrimary = b.frame.origin.x >= 0

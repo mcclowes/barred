@@ -2,8 +2,6 @@ import SwiftUI
 
 struct MenuBarItemRow: View {
     let item: MenuBarItem
-    let visibility: ItemVisibility
-    let onVisibilityChanged: (ItemVisibility) -> Void
 
     var body: some View {
         HStack {
@@ -21,19 +19,14 @@ struct MenuBarItemRow: View {
 
             Spacer()
 
-            Picker("", selection: Binding(
-                get: { visibility },
-                set: { onVisibilityChanged($0) }
-            )) {
-                Label("Visible", systemImage: "eye")
-                    .tag(ItemVisibility.alwaysShow)
-                Label("Barman bar", systemImage: "menubar.arrow.up.rectangle")
-                    .tag(ItemVisibility.barmanBar)
-                Label("Hidden", systemImage: "eye.slash")
-                    .tag(ItemVisibility.hidden)
+            if item.frame.origin.x < 0 {
+                Text("Hidden")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
+                    .background(.quaternary, in: .capsule)
             }
-            .pickerStyle(.menu)
-            .frame(width: 140)
         }
         .padding(.vertical, 4)
     }

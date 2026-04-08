@@ -63,6 +63,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         buildMenu()
     }
 
+    @objc func toggleBarmanBarFromDivider() {
+        toggleBarmanBar()
+    }
+
     @objc private func requestAccessibility() {
         controller.accessibilityService.requestTrust()
     }
@@ -90,7 +94,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func quitApp() {
+        // Restore all hidden items before quitting
+        controller.restoreAll()
         NSApp.terminate(nil)
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        controller.restoreAll()
     }
 }
 

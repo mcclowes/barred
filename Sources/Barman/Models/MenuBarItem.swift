@@ -1,7 +1,8 @@
+import ApplicationServices
 import Foundation
 import CoreGraphics
 
-struct MenuBarItem: Identifiable, Hashable {
+struct MenuBarItem: Identifiable {
     let id: String
     let pid: pid_t
     let appName: String
@@ -10,6 +11,7 @@ struct MenuBarItem: Identifiable, Hashable {
     let windowID: CGWindowID
     var frame: CGRect
     let itemIndex: Int
+    let axElement: AXUIElement?
 
     var displayName: String {
         if let title, !title.isEmpty {
@@ -19,7 +21,7 @@ struct MenuBarItem: Identifiable, Hashable {
     }
 
     var subtitle: String? {
-        if title != nil, !title!.isEmpty {
+        if let title, !title.isEmpty {
             return appName
         }
         return nil
@@ -30,7 +32,9 @@ struct MenuBarItem: Identifiable, Hashable {
         let itemTitle = title ?? "item-\(itemIndex)"
         return "\(bundle):\(itemTitle)"
     }
+}
 
+extension MenuBarItem: Hashable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }

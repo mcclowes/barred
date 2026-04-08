@@ -38,12 +38,14 @@ struct ItemsSettingsView: View {
                     description: Text("Menu bar items will appear here once detected.")
                 )
             } else {
-                List(controller.detectedItems) { item in
-                    MenuBarItemRow(
-                        item: item,
-                        visibility: controller.visibility(for: item)
-                    ) { newVisibility in
-                        controller.setVisibility(newVisibility, for: item)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("⌘-drag menu bar icons to rearrange them. Items to the left of the Barman divider (|) will be hidden.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 4)
+
+                    List(controller.detectedItems) { item in
+                        MenuBarItemRow(item: item)
                     }
                 }
             }
