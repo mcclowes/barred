@@ -29,6 +29,7 @@ targets:
         CODE_SIGN_ENTITLEMENTS: Resources/Barman.entitlements
         GENERATE_INFOPLIST_FILE: false
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_IDENTITY: "Barman Dev"
     entitlements:
       path: Resources/Barman.entitlements
 
