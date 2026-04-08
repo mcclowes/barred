@@ -14,7 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem.button {
             button.image = NSImage(
-                systemSymbolName: "line.3.horizontal.decrease",
+                systemSymbolName: "rectangle.topthird.inset.filled",
                 accessibilityDescription: "Barman"
             )
             button.action = #selector(statusItemClicked(_:))
@@ -42,10 +42,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         controller.accessibilityService.checkTrust()
-        print("[Barman] AXIsProcessTrusted = \(controller.accessibilityService.isTrusted)")
         if !controller.accessibilityService.isTrusted {
+            print("[Barman] AXIsProcessTrusted = false, requesting trust")
             controller.accessibilityService.requestTrust()
-            return
         }
 
         controller.toggleBarmanBar()
@@ -81,6 +80,9 @@ struct BarmanApp: App {
     var body: some Scene {
         Settings {
             SettingsView()
+                .onAppear {
+                    NSApp.activate(ignoringOtherApps: true)
+                }
         }
     }
 }
