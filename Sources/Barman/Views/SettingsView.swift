@@ -28,6 +28,24 @@ struct SettingsView: View {
 struct ItemsSettingsView: View {
     let controller: MenuBarController
 
+    private var visibleItems: [MenuBarItem] {
+        controller.detectedItems.filter { !$0.isHidden }
+    }
+
+    private var hiddenItems: [MenuBarItem] {
+        controller.detectedItems.filter { $0.isHidden }
+    }
+
+    private var appsWithMultipleItems: Set<String> {
+        let appNames = controller.detectedItems.map(\.appName)
+        let counts = Dictionary(grouping: appNames, by: { $0 }).filter { $0.value.count > 1 }
+        return Set(counts.keys)
+    }
+
+    private func shouldShowIndex(for item: MenuBarItem) -> Bool {
+        appsWithMultipleItems.contains(item.appName)
+    }
+
     var body: some View {
         VStack(alignment: .leading) {
             if !controller.accessibilityService.isTrusted {
@@ -45,8 +63,24 @@ struct ItemsSettingsView: View {
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 4)
 
-                    List(controller.detectedItems) { item in
-                        MenuBarItemRow(item: item)
+                    List {
+                        Section {
+                            ForEach(visibleItems) { item in
+                                MenuBarItemRow(item: item, showIndex: shouldShowIndex(for: item))
+                            }
+                        } header: {
+                            Label("Visible", systemImage: "eye")
+                        }
+
+                        if !hiddenItems.isEmpty {
+                            Section {
+                                ForEach(hiddenItems) { item in
+                                    MenuBarItemRow(item: item, showIndex: shouldShowIndex(for: item))
+                                }
+                            } header: {
+                                Label("Hidden", systemImage: "eye.slash")
+                            }
+                        }
                     }
                 }
             }

@@ -1,6 +1,7 @@
+import AppKit
 import ApplicationServices
-import Foundation
 import CoreGraphics
+import Foundation
 
 struct MenuBarItem: Identifiable {
     let id: String
@@ -13,11 +14,19 @@ struct MenuBarItem: Identifiable {
     let itemIndex: Int
     let axElement: AXUIElement?
 
+    var isHidden: Bool {
+        frame.origin.x < 0
+    }
+
     var displayName: String {
+        displayName(showIndex: true)
+    }
+
+    func displayName(showIndex: Bool) -> String {
         if let title, !title.isEmpty {
             return title
         }
-        return "\(appName) #\(itemIndex + 1)"
+        return showIndex ? "\(appName) #\(itemIndex + 1)" : appName
     }
 
     var subtitle: String? {
@@ -25,6 +34,14 @@ struct MenuBarItem: Identifiable {
             return appName
         }
         return nil
+    }
+
+    var appIcon: NSImage? {
+        if let bundleIdentifier,
+           let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) {
+            return NSWorkspace.shared.icon(forFile: url.path)
+        }
+        return NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier ?? "").first?.icon
     }
 
     var persistenceKey: String {
