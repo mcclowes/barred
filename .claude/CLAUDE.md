@@ -18,6 +18,8 @@ make app                 # build .app bundle via Scripts/build-app.sh
 make run                 # build and run
 make test                # run tests
 make xcode               # regenerate Xcode project from project.yml
+make clean               # remove build artifacts
+make help                # show available targets
 ```
 
 ## Architecture
@@ -27,8 +29,10 @@ make xcode               # regenerate Xcode project from project.yml
 - `Models/` — data types (MenuBarItem, UserPreferences)
 - `Views/` — SwiftUI views (BarredMenuView, SettingsView, OnboardingView, MenuBarItemRow)
 - `Utilities/` — helpers (AXExtensions, OverlayWindow)
+- `Resources/` — Info.plist, Barred.entitlements, AppIcon.icns
 
 ## Notes
 
 - Requires Accessibility permission (System Settings > Privacy & Security > Accessibility)
 - Tests in `Tests/BarredTests/` (run with `make test`)
+- CI/CD: GitHub Actions release workflow (`.github/workflows/release.yml`) — builds, signs, notarizes, creates GitHub release, and updates Homebrew cask (`brew tap mcclowes/barred`)

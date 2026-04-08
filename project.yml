@@ -18,8 +18,9 @@ targets:
     platform: macOS
     sources:
       - Sources/Barred
-    resources:
-      - Resources
+      - Resources/Assets.xcassets
+      - path: Resources/AppIcon.icns
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mcclowes.barred

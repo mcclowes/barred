@@ -34,8 +34,16 @@ cp "$PROJECT_DIR/Resources/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${BUILD_NUMBER:-1}" "$APP_BUNDLE/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :LSMinimumSystemVersion 14.0" "$APP_BUNDLE/Contents/Info.plist"
 
-# Copy app icon if present
-if [ -f "$PROJECT_DIR/Resources/AppIcon.icns" ]; then
+# Compile asset catalog (generates AppIcon.icns from Assets.xcassets)
+if [ -d "$PROJECT_DIR/Resources/Assets.xcassets" ]; then
+    echo "Compiling asset catalog..."
+    xcrun actool "$PROJECT_DIR/Resources/Assets.xcassets" \
+        --compile "$APP_BUNDLE/Contents/Resources" \
+        --platform macosx \
+        --minimum-deployment-target 14.0 \
+        --app-icon AppIcon \
+        --output-partial-info-plist /tmp/barred-asset-info.plist
+elif [ -f "$PROJECT_DIR/Resources/AppIcon.icns" ]; then
     cp "$PROJECT_DIR/Resources/AppIcon.icns" "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
 fi
 

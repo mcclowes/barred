@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		00ACB00C7557AC9AE6DFD6A7 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 14867B5565ABE0E4457ADFB5 /* AppIcon.icns */; };
 		037B3B1A64E0625F8F130FC7 /* MenuBarItemTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 457F5C7A8CE556B66B00A807 /* MenuBarItemTests.swift */; };
 		058486984E60FB7D0C3F81D1 /* MenuBarItemRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AC07F740ED7B680A40CE49C /* MenuBarItemRow.swift */; };
 		05F5AF5C82A4218E37288A50 /* PreferencesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9FCB56B8D80710B72B0D99C /* PreferencesStore.swift */; };
@@ -23,6 +24,7 @@
 		6CC54FD2DF6903C15961ED4D /* AXExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D0433BB2EEB71E8D957ED9A /* AXExtensions.swift */; };
 		74024D66942180F12A5B1DE7 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B691C12AD4B702959152975A /* OnboardingView.swift */; };
 		A287CDDB2698B477793FF698 /* BarredMenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8574DCFBCF023B25D751326 /* BarredMenuView.swift */; };
+		E76363CD417C071E6CE3CBFE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E42204F30349C8D78F2399CE /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -37,6 +39,7 @@
 
 /* Begin PBXFileReference section */
 		094BDBC02FC90916B845EB9A /* BarredApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarredApp.swift; sourceTree = "<group>"; };
+		14867B5565ABE0E4457ADFB5 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
 		17AD5B193DEAA49B8845FB99 /* SectionDivider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SectionDivider.swift; sourceTree = "<group>"; };
 		2AD58FA64BE8B48B7BAAECF7 /* MenuBarItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarItem.swift; sourceTree = "<group>"; };
 		457F5C7A8CE556B66B00A807 /* MenuBarItemTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarItemTests.swift; sourceTree = "<group>"; };
@@ -51,6 +54,7 @@
 		B129DE3C59BFB6E178BF3156 /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
 		B691C12AD4B702959152975A /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		D9FCB56B8D80710B72B0D99C /* PreferencesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesStore.swift; sourceTree = "<group>"; };
+		E42204F30349C8D78F2399CE /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		E6F08C97D5DD2A0DE86D6C00 /* MenuBarDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarDetector.swift; sourceTree = "<group>"; };
 		F19B89A24F09E83CB487DEC3 /* UserPreferencesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserPreferencesTests.swift; sourceTree = "<group>"; };
 		F8574DCFBCF023B25D751326 /* BarredMenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarredMenuView.swift; sourceTree = "<group>"; };
@@ -66,6 +70,15 @@
 				54FECA885DCCB8CEA9C164BB /* SettingsView.swift */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		7E52FEC3FF9531F677FAEF42 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				14867B5565ABE0E4457ADFB5 /* AppIcon.icns */,
+				E42204F30349C8D78F2399CE /* Assets.xcassets */,
+			);
+			path = Resources;
 			sourceTree = "<group>";
 		};
 		886B3C94314AE72E38528C94 /* Barred */ = {
@@ -95,6 +108,7 @@
 			children = (
 				886B3C94314AE72E38528C94 /* Barred */,
 				F9C3E709ED66244D366B21B2 /* BarredTests */,
+				7E52FEC3FF9531F677FAEF42 /* Resources */,
 				8AC582EF7AC665C9DA427CB9 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -165,6 +179,7 @@
 			buildConfigurationList = 6B27FE846B1C4C870E85247E /* Build configuration list for PBXNativeTarget "Barred" */;
 			buildPhases = (
 				EB84FB57C009BC55125CEC43 /* Sources */,
+				7F7B713E8D22CB31EC67C463 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -207,6 +222,18 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		7F7B713E8D22CB31EC67C463 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				00ACB00C7557AC9AE6DFD6A7 /* AppIcon.icns in Resources */,
+				E76363CD417C071E6CE3CBFE /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		C114EE7852E4B340DD0B9BD3 /* Sources */ = {
