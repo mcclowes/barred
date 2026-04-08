@@ -38,9 +38,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         if optionHeld {
             togglePopover(sender)
-        } else {
-            controller.toggleBarmanBar()
+            return
         }
+
+        controller.accessibilityService.checkTrust()
+        print("[Barman] AXIsProcessTrusted = \(controller.accessibilityService.isTrusted)")
+        if !controller.accessibilityService.isTrusted {
+            controller.accessibilityService.requestTrust()
+            return
+        }
+
+        controller.toggleBarmanBar()
     }
 
     private func togglePopover(_ sender: NSStatusBarButton) {

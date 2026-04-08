@@ -1,3 +1,4 @@
+import ServiceManagement
 import SwiftUI
 
 struct SettingsView: View {
@@ -59,6 +60,25 @@ struct GeneralSettingsView: View {
 
     var body: some View {
         Form {
+            Toggle("Launch at login", isOn: Binding(
+                get: { controller.preferences.launchAtLogin },
+                set: { newValue in
+                    controller.preferences.launchAtLogin = newValue
+                    controller.preferencesStore.save()
+                    do {
+                        if newValue {
+                            try SMAppService.mainApp.register()
+                        } else {
+                            try SMAppService.mainApp.unregister()
+                        }
+                    } catch {
+                        // Revert on failure
+                        controller.preferences.launchAtLogin = !newValue
+                        controller.preferencesStore.save()
+                    }
+                }
+            ))
+
             Toggle("Show Barman bar on click", isOn: Binding(
                 get: { controller.preferences.showBarmanBarOnClick },
                 set: { newValue in

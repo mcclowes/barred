@@ -10,7 +10,18 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "Barman",
-            path: "Sources/Barman"
+            path: "Sources/Barman",
+            swiftSettings: [
+                .enableExperimentalFeature("StrictConcurrency=complete")
+            ]
+        ),
+        .testTarget(
+            name: "BarmanTests",
+            dependencies: ["Barman"],
+            path: "Tests/BarmanTests",
+            swiftSettings: [
+                .enableExperimentalFeature("StrictConcurrency=complete")
+            ]
         )
     ]
 )

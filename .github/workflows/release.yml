@@ -1,0 +1,124 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set version from tag
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+
+      - name: Update Info.plist version
+        run: |
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" Resources/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${GITHUB_RUN_NUMBER}" Resources/Info.plist
+
+      - name: Import signing certificate
+        if: env.CERTIFICATE_P12 != ''
+        env:
+          CERTIFICATE_P12: ${{ secrets.CERTIFICATE_P12 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
+        run: |
+          # Create temporary keychain
+          KEYCHAIN_PATH=$RUNNER_TEMP/signing.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Import certificate
+          echo "$CERTIFICATE_P12" | base64 --decode > $RUNNER_TEMP/certificate.p12
+          security import $RUNNER_TEMP/certificate.p12 \
+            -k "$KEYCHAIN_PATH" \
+            -P "$CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign
+          rm $RUNNER_TEMP/certificate.p12
+
+          # Allow codesign to access keychain
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
+
+      - name: Build, sign, and notarize
+        env:
+          DEVELOPER_ID_APPLICATION: ${{ secrets.DEVELOPER_ID_APPLICATION }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          chmod +x Scripts/build-app.sh
+          Scripts/build-app.sh
+
+      - name: Get SHA256
+        run: |
+          SHA=$(shasum -a 256 .build/Barman.zip | awk '{print $1}')
+          echo "SHA256=$SHA" >> $GITHUB_ENV
+          echo "SHA256: $SHA"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Barman v${{ env.VERSION }}
+          body: |
+            ## Barman v${{ env.VERSION }}
+
+            ### Install via Homebrew
+            ```bash
+            brew tap mcclowes/barman
+            brew install --cask barman
+            ```
+
+            ### Manual install
+            Download `Barman.zip`, extract, and move `Barman.app` to `/Applications`.
+
+            **SHA256:** `${{ env.SHA256 }}`
+          files: .build/Barman.zip
+          draft: false
+          prerelease: false
+
+      - name: Update Homebrew cask
+        if: env.HOMEBREW_TAP_TOKEN != ''
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          git clone https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/mcclowes/homebrew-barman.git $RUNNER_TEMP/homebrew-barman
+
+          cat > $RUNNER_TEMP/homebrew-barman/Casks/barman.rb << 'CASK'
+          cask "barman" do
+            version "VERSION_PLACEHOLDER"
+            sha256 "SHA_PLACEHOLDER"
+
+            url "https://github.com/mcclowes/barman/releases/download/v#{version}/Barman.zip"
+            name "Barman"
+            desc "macOS menu bar manager"
+            homepage "https://github.com/mcclowes/barman"
+
+            depends_on macos: ">= :sonoma"
+
+            app "Barman.app"
+
+            zap trash: [
+              "~/Library/Preferences/com.barman.app.plist",
+            ]
+          end
+          CASK
+
+          # Replace placeholders
+          sed -i '' "s/VERSION_PLACEHOLDER/$VERSION/" $RUNNER_TEMP/homebrew-barman/Casks/barman.rb
+          sed -i '' "s/SHA_PLACEHOLDER/$SHA256/" $RUNNER_TEMP/homebrew-barman/Casks/barman.rb
+
+          cd $RUNNER_TEMP/homebrew-barman
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Casks/barman.rb
+          git commit -m "Update barman to v$VERSION"
+          git push

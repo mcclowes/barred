@@ -1,21 +1,21 @@
-.PHONY: build release app run clean
+.PHONY: build release app run test clean help
 
-build:
+build: ## Debug build
 	swift build
 
-release:
+release: ## Release build
 	swift build -c release
 
 app: ## Build .app bundle
 	./Scripts/build-app.sh
 
-run: build ## Build and run debug binary
-	.build/debug/Barman
+test: ## Run tests
+	swift test
 
-run-app: app ## Build and open .app bundle
+run: app ## Build and open .app bundle
 	open .build/Barman.app
 
-clean:
+clean: ## Remove build artifacts
 	swift package clean
 	rm -rf .build/Barman.app
 

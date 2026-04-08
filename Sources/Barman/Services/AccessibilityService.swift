@@ -5,7 +5,6 @@ import Foundation
 @MainActor @Observable
 final class AccessibilityService {
     private(set) var isTrusted = false
-
     init() {
         checkTrust()
     }
