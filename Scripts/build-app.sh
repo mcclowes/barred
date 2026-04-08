@@ -26,8 +26,13 @@ mkdir -p "$APP_BUNDLE/Contents/Resources"
 # Copy executable
 cp "$BUILD_DIR/release/Barred" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 
-# Copy Info.plist
+# Copy Info.plist and resolve Xcode build variables
 cp "$PROJECT_DIR/Resources/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c "Set :CFBundleExecutable $APP_NAME" "$APP_BUNDLE/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.mcclowes.barred" "$APP_BUNDLE/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${VERSION:-1.0.0}" "$APP_BUNDLE/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${BUILD_NUMBER:-1}" "$APP_BUNDLE/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c "Set :LSMinimumSystemVersion 14.0" "$APP_BUNDLE/Contents/Info.plist"
 
 # Copy app icon if present
 if [ -f "$PROJECT_DIR/Resources/AppIcon.icns" ]; then
