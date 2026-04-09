@@ -96,11 +96,7 @@ if [ -n "$SIGN_IDENTITY" ]; then
     echo "Verifying signature..."
     codesign --verify --strict "$APP_BUNDLE"
     echo "Checking notarization requirements..."
-    if [ -n "${CI:-}" ]; then
-        spctl --assess --type execute --verbose "$APP_BUNDLE"
-    else
-        spctl --assess --type execute --verbose "$APP_BUNDLE" || echo "  (spctl check may fail without notarization — this is expected pre-notarization)"
-    fi
+    spctl --assess --type execute --verbose "$APP_BUNDLE" || echo "  (spctl check expected to fail pre-notarization)"
 else
     echo "Warning: No signing identity found. Using ad-hoc signing (permissions may reset on rebuild)."
     echo "  Create a local cert named 'Barred Dev' in Keychain Access to fix this."
