@@ -159,7 +159,7 @@ struct AboutView: View {
             Text("Menu bar manager for macOS")
                 .foregroundStyle(.secondary)
 
-            Text("v1.0.0")
+            Text("v\(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?")")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
         }

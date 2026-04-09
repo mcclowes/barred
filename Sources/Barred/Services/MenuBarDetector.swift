@@ -36,6 +36,7 @@ final class MenuBarDetector {
 
         items = deduplicateAcrossScreens(items)
 
+        #if DEBUG
         if detectedItems.count != items.count || detectedItems.map(\.displayName) != items.map(\.displayName) {
             print("[Barred] Detected \(items.count) menu bar items:")
             for item in items {
@@ -44,6 +45,7 @@ final class MenuBarDetector {
                 )
             }
         }
+        #endif
 
         detectedItems = items
     }

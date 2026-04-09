@@ -24,18 +24,22 @@ extension AXUIElement {
     func position() -> CGPoint? {
         var value: AnyObject?
         let result = AXUIElementCopyAttributeValue(self, kAXPositionAttribute as CFString, &value)
-        guard result == .success else { return nil }
+        guard result == .success, let value, CFGetTypeID(value) == AXValueGetTypeID() else { return nil }
+        // swiftlint:disable:next force_cast
+        let axValue = value as! AXValue
         var point = CGPoint.zero
-        AXValueGetValue(value as! AXValue, .cgPoint, &point)
+        AXValueGetValue(axValue, .cgPoint, &point)
         return point
     }
 
     func size() -> CGSize? {
         var value: AnyObject?
         let result = AXUIElementCopyAttributeValue(self, kAXSizeAttribute as CFString, &value)
-        guard result == .success else { return nil }
+        guard result == .success, let value, CFGetTypeID(value) == AXValueGetTypeID() else { return nil }
+        // swiftlint:disable:next force_cast
+        let axValue = value as! AXValue
         var size = CGSize.zero
-        AXValueGetValue(value as! AXValue, .cgSize, &size)
+        AXValueGetValue(axValue, .cgSize, &size)
         return size
     }
 
