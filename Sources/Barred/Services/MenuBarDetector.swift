@@ -59,14 +59,14 @@ final class MenuBarDetector: MenuBarDetecting {
         items = deduplicateAcrossScreens(items)
 
         #if DEBUG
-        if detectedItems.count != items.count || detectedItems.map(\.displayName) != items.map(\.displayName) {
-            print("[Barred] Detected \(items.count) menu bar items:")
-            for item in items {
-                print(
-                    "  - \(item.displayName) [\(item.appName)] (wid: \(item.windowID), x: \(Int(item.frame.origin.x)))"
-                )
+            if detectedItems.count != items.count || detectedItems.map(\.displayName) != items.map(\.displayName) {
+                print("[Barred] Detected \(items.count) menu bar items:")
+                for item in items {
+                    print(
+                        "  - \(item.displayName) [\(item.appName)] (wid: \(item.windowID), x: \(Int(item.frame.origin.x)))"
+                    )
+                }
             }
-        }
         #endif
 
         detectedItems = items

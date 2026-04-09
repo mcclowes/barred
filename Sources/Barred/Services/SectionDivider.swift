@@ -54,7 +54,7 @@ final class SectionDivider: SectionDividing {
     func expand() {
         guard let statusItem else {
             #if DEBUG
-            print("[Barred] expand() skipped — statusItem is nil (setUp not called yet?)")
+                print("[Barred] expand() skipped — statusItem is nil (setUp not called yet?)")
             #endif
             return
         }
@@ -62,7 +62,7 @@ final class SectionDivider: SectionDividing {
         isExpanded = true
         let length = expandedLength
         #if DEBUG
-        print("[Barred] Expanding divider to \(length)px")
+            print("[Barred] Expanding divider to \(length)px")
         #endif
         statusItem.length = length
         if let button = statusItem.button {
@@ -75,14 +75,14 @@ final class SectionDivider: SectionDividing {
     func collapse() {
         guard let statusItem else {
             #if DEBUG
-            print("[Barred] collapse() skipped — statusItem is nil")
+                print("[Barred] collapse() skipped — statusItem is nil")
             #endif
             return
         }
         guard isExpanded else { return }
         isExpanded = false
         #if DEBUG
-        print("[Barred] Collapsing divider to \(Self.collapsedLength)px")
+            print("[Barred] Collapsing divider to \(Self.collapsedLength)px")
         #endif
         statusItem.length = Self.collapsedLength
         if let button = statusItem.button {

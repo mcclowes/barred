@@ -45,7 +45,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             controller.accessibilityService.checkTrust()
             if !controller.accessibilityService.isTrusted {
                 #if DEBUG
-                print("[Barred] AXIsProcessTrusted = false, requesting trust")
+                    print("[Barred] AXIsProcessTrusted = false, requesting trust")
                 #endif
                 controller.accessibilityService.requestTrust()
             }

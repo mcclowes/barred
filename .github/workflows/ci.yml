@@ -16,10 +16,14 @@ jobs:
         run: sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
 
       - name: Build
-        run: make build
+        run: >
+          xcodebuild -project Barred.xcodeproj -scheme Barred -configuration Debug
+          CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO build
 
       - name: Test
-        run: make test
+        run: >
+          xcodebuild -project Barred.xcodeproj -scheme BarredTests -configuration Debug
+          CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO test
 
   format-check:
     runs-on: macos-15

@@ -46,7 +46,7 @@ final class MenuBarController {
     func toggleBarredBar() {
         isBarredBarVisible.toggle()
         #if DEBUG
-        print("[Barred] toggleBarredBar → isBarredBarVisible=\(isBarredBarVisible)")
+            print("[Barred] toggleBarredBar → isBarredBarVisible=\(isBarredBarVisible)")
         #endif
 
         if isBarredBarVisible {
