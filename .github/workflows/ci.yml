@@ -7,28 +7,27 @@ on:
     branches: [main]
 
 jobs:
-  build-and-test:
+  lint:
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
-      - name: Build
-        run: >
-          xcodebuild -project Barred.xcodeproj -scheme Barred -configuration Debug
-          CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO build
+      - name: Install tools
+        run: brew install swiftformat swiftlint
 
-      - name: Test
-        run: >
-          xcodebuild -project Barred.xcodeproj -scheme Barred -configuration Debug
-          CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO test
+      - name: Lint
+        run: make lint
 
-  format-check:
+  test:
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
-      - name: Install SwiftFormat
-        run: brew install swiftformat
+      - name: Install XcodeGen
+        run: brew install xcodegen
 
-      - name: Check formatting
-        run: make format-check
+      - name: Generate Xcode project
+        run: make generate
+
+      - name: Build and test
+        run: make test
