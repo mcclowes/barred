@@ -1,7 +1,5 @@
 import AppKit
 import ApplicationServices
-import CoreGraphics
-import Foundation
 
 struct MenuBarItem: Identifiable {
     let id: String
@@ -37,12 +35,11 @@ struct MenuBarItem: Identifiable {
     }
 
     var appIcon: NSImage? {
-        if let bundleIdentifier,
-           let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier)
-        {
+        guard let bundleIdentifier else { return nil }
+        if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) {
             return NSWorkspace.shared.icon(forFile: url.path)
         }
-        return NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier ?? "").first?.icon
+        return NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier).first?.icon
     }
 
     var persistenceKey: String {

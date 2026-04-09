@@ -1,13 +1,14 @@
 import SwiftUI
 
 struct OnboardingView: View {
-    let controller: MenuBarController
+    @Environment(MenuBarController.self) private var controller
 
     var body: some View {
         VStack(spacing: 16) {
             Image(systemName: "lock.shield")
                 .font(.system(size: 40))
                 .foregroundStyle(.orange)
+                .accessibilityHidden(true)
 
             Text("Accessibility access required")
                 .font(.headline)

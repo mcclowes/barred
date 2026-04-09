@@ -1,9 +1,12 @@
 import Foundation
 
-@Observable
+@MainActor @Observable
 final class PreferencesStore {
     private static let key = "com.barred.preferences"
-    var preferences: UserPreferences
+
+    var preferences: UserPreferences {
+        didSet { persist() }
+    }
 
     init() {
         if let data = UserDefaults.standard.data(forKey: Self.key),
@@ -15,7 +18,7 @@ final class PreferencesStore {
         }
     }
 
-    func save() {
+    private func persist() {
         if let data = try? JSONEncoder().encode(preferences) {
             UserDefaults.standard.set(data, forKey: Self.key)
         }

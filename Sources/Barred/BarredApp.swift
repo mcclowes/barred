@@ -3,14 +3,13 @@ import SwiftUI
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private let controller = MenuBarController.shared
+    let controller = MenuBarController()
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
 
     func applicationDidFinishLaunching(_: Notification) {
         NSApp.setActivationPolicy(.accessory)
 
-        // Create the main Barred status item
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem.button {
             button.image = NSImage(
@@ -22,14 +21,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             button.sendAction(on: [.leftMouseUp])
         }
 
-        // Set up the popover for option+click
         popover = NSPopover()
         popover.contentSize = NSSize(width: 240, height: 200)
         popover.behavior = .transient
-        popover.contentViewController = NSHostingController(rootView: BarredMenuView())
+        popover.contentViewController = NSHostingController(
+            rootView: BarredMenuView()
+                .environment(controller)
+        )
 
-        // Create divider and begin hide cycle — must happen after
-        // the main status item exists so divider sits to its left.
         controller.start()
     }
 
@@ -66,7 +65,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         controller.toggleBarredBar()
     }
 
-    @objc private func quitApp() {
+    private func quitApp() {
         controller.restoreAll()
         NSApp.terminate(nil)
     }
@@ -83,8 +82,9 @@ struct BarredApp: App {
     var body: some Scene {
         Settings {
             SettingsView()
+                .environment(appDelegate.controller)
                 .onAppear {
-                    NSApp.activate()
+                    NSApp.activate(ignoringOtherApps: true)
                 }
         }
     }

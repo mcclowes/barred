@@ -1,13 +1,11 @@
 import AppKit
 import ApplicationServices
-import CoreGraphics
-import Foundation
 
 @MainActor @Observable
 final class MenuBarDetector {
     private let accessibilityService: AccessibilityService
     private(set) var detectedItems: [MenuBarItem] = []
-    private var timer: Timer?
+    private var scanTask: Task<Void, Never>?
 
     init(accessibilityService: AccessibilityService) {
         self.accessibilityService = accessibilityService
@@ -15,16 +13,21 @@ final class MenuBarDetector {
 
     func startScanning() {
         scan()
-        timer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.scan()
+        scanTask = Task {
+            while !Task.isCancelled {
+                do {
+                    try await Task.sleep(for: .seconds(3))
+                } catch {
+                    return
+                }
+                scan()
             }
         }
     }
 
     func stopScanning() {
-        timer?.invalidate()
-        timer = nil
+        scanTask?.cancel()
+        scanTask = nil
     }
 
     func scan() {
@@ -62,7 +65,6 @@ final class MenuBarDetector {
                 return nil
             }
 
-            // Match AX item to a CGWindowList window by PID + position overlap
             let windowID = findWindowID(
                 for: axItem,
                 in: windowMap
@@ -91,6 +93,13 @@ final class MenuBarDetector {
         let frame: CGRect
     }
 
+    /// Window layer for status bar items (menu bar extras).
+    private static let statusItemWindowLayer = 25
+
+    /// Maximum expected width for a single menu bar extra.
+    /// Items wider than this are likely full menu bar backgrounds, not extras.
+    private static let maxMenuBarItemWidth: Double = 300
+
     private func menuBarWindowMap() -> [WindowInfo] {
         guard let windowList = CGWindowListCopyWindowInfo(
             [.optionOnScreenOnly, .excludeDesktopElements],
@@ -101,7 +110,7 @@ final class MenuBarDetector {
 
         return windowList.compactMap { info -> WindowInfo? in
             guard let layer = info[kCGWindowLayer as String] as? Int,
-                  layer == 25,
+                  layer == Self.statusItemWindowLayer,
                   let boundsDict = info[kCGWindowBounds as String] as? [String: Any],
                   let ownerPID = info[kCGWindowOwnerPID as String] as? Int32
             else { return nil }
@@ -112,7 +121,7 @@ final class MenuBarDetector {
             let height = (boundsDict["Height"] as? NSNumber)?.doubleValue ?? 0
             let frame = CGRect(x: x, y: y, width: width, height: height)
 
-            guard width > 0, width < 200, height > 0 else { return nil }
+            guard width > 0, width < Self.maxMenuBarItemWidth, height > 0 else { return nil }
 
             let windowID = (info[kCGWindowNumber as String] as? NSNumber)?.uint32Value ?? 0
 
@@ -123,9 +132,8 @@ final class MenuBarDetector {
     private func findWindowID(for axItem: AXMenuBarItemInfo, in windows: [WindowInfo]) -> CGWindowID {
         guard let axFrame = axItem.frame else { return 0 }
 
-        // Find the window with matching PID and closest position
         var bestMatch: CGWindowID = 0
-        var bestDistance: CGFloat = .greatestFiniteMagnitude
+        var bestDistance: Double = .greatestFiniteMagnitude
 
         for window in windows where window.pid == axItem.pid {
             let dx = abs(window.frame.origin.x - axFrame.origin.x)

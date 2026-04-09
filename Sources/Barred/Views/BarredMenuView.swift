@@ -1,26 +1,23 @@
 import SwiftUI
 
 struct BarredMenuView: View {
-    @State private var controller = MenuBarController.shared
-    @Environment(\.dismiss) private var dismiss
+    @Environment(MenuBarController.self) private var controller
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Button(action: {
+            Button(
+                controller.isBarredBarVisible ? "Hide Barred bar" : "Show Barred bar",
+                systemImage: controller.isBarredBarVisible ? "eye.slash" : "eye"
+            ) {
                 controller.toggleBarredBar()
-            }) {
-                Label(
-                    controller.isBarredBarVisible ? "Hide Barred bar" : "Show Barred bar",
-                    systemImage: controller.isBarredBarVisible ? "eye.slash" : "eye"
-                )
             }
             .buttonStyle(.plain)
 
             Divider()
 
             if !controller.accessibilityService.isTrusted {
-                Button(action: { controller.accessibilityService.requestTrust() }) {
-                    Label("Grant accessibility access...", systemImage: "lock.shield")
+                Button("Grant accessibility access...", systemImage: "lock.shield") {
+                    controller.accessibilityService.requestTrust()
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.orange)
@@ -32,7 +29,7 @@ struct BarredMenuView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            Text("⌘+drag a menu bar icon to move it out of hidden")
+            Text("\u{2318}+drag a menu bar icon to move it out of hidden")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
 
@@ -45,11 +42,9 @@ struct BarredMenuView: View {
 
             Divider()
 
-            Button(action: {
+            Button("Quit Barred", systemImage: "xmark.circle") {
                 controller.restoreAll()
                 NSApplication.shared.terminate(nil)
-            }) {
-                Label("Quit Barred", systemImage: "xmark.circle")
             }
             .buttonStyle(.plain)
         }

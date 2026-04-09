@@ -10,14 +10,16 @@ final class SectionDivider {
     private var isExpanded = false
 
     /// The collapsed length — a small dot visible as a section separator.
-    private static let collapsedLength: CGFloat = 20
+    private static let collapsedLength: Double = 20
 
     /// Compute a safe expanded length that pushes items off-screen without
     /// causing the multi-GB memory leaks seen with excessively large values.
-    private var expandedLength: CGFloat {
+    private var expandedLength: Double {
         guard let screen = NSScreen.main else { return 2000 }
         let screenWidth = screen.frame.width
-        return max(500, min(screenWidth + 200, 4000))
+        // Use 2x screen width to handle ultrawide/5K displays, capped to
+        // avoid the memory leak that occurs with extremely large values.
+        return min(screenWidth * 2, 10000)
     }
 
     /// Create the divider status item. Must be called AFTER the main Barred
@@ -43,15 +45,18 @@ final class SectionDivider {
     /// Expand the divider to push items to its left off-screen.
     func expand() {
         guard let statusItem else {
+            #if DEBUG
             print("[Barred] expand() skipped — statusItem is nil (setUp not called yet?)")
+            #endif
             return
         }
         guard !isExpanded else { return }
         isExpanded = true
         let length = expandedLength
+        #if DEBUG
         print("[Barred] Expanding divider to \(length)px")
+        #endif
         statusItem.length = length
-        // Keep button content so macOS allocates the full requested width
         if let button = statusItem.button {
             button.image = nil
             button.title = " "
@@ -61,12 +66,16 @@ final class SectionDivider {
     /// Collapse the divider to reveal hidden items.
     func collapse() {
         guard let statusItem else {
+            #if DEBUG
             print("[Barred] collapse() skipped — statusItem is nil")
+            #endif
             return
         }
         guard isExpanded else { return }
         isExpanded = false
+        #if DEBUG
         print("[Barred] Collapsing divider to \(Self.collapsedLength)px")
+        #endif
         statusItem.length = Self.collapsedLength
         if let button = statusItem.button {
             button.title = ""

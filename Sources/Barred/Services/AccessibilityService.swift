@@ -1,6 +1,5 @@
 import AppKit
 import ApplicationServices
-import Foundation
 
 @MainActor @Observable
 final class AccessibilityService {
@@ -21,19 +20,21 @@ final class AccessibilityService {
     }
 
     /// Enumerate all menu bar extras (right-side status items) via AX.
-    /// Queries each running app for its AXExtrasMenuBar children.
+    /// Queries running apps that could have menu extras (regular and accessory apps).
     func enumerateAllExtrasItems() -> [AXMenuBarItemInfo] {
         guard isTrusted else { return [] }
 
         var results: [AXMenuBarItemInfo] = []
 
-        // Query ALL running applications — including system agents
-        let apps = NSWorkspace.shared.runningApplications
+        // Only query apps with regular or accessory activation policies —
+        // prohibited apps (background agents, XPC, daemons) never have menu extras.
+        let apps = NSWorkspace.shared.runningApplications.filter {
+            $0.activationPolicy == .regular || $0.activationPolicy == .accessory
+        }
 
         for app in apps {
             let axApp = AXUIElementCreateApplication(app.processIdentifier)
 
-            // Try AXExtrasMenuBar — this is the right-side menu bar (status items)
             guard let extrasMenuBar: AXUIElement = axApp.attribute("AXExtrasMenuBar") else {
                 continue
             }
@@ -45,7 +46,6 @@ final class AccessibilityService {
                 let identifier = child.identifier()
                 let frame = child.frame()
 
-                // Build the best display name we can
                 let displayName = title ?? desc ?? identifier
 
                 results.append(AXMenuBarItemInfo(

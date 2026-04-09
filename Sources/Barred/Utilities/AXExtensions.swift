@@ -1,5 +1,4 @@
 import ApplicationServices
-import Foundation
 
 extension AXUIElement {
     func attribute<T>(_ attribute: String) -> T? {
@@ -25,8 +24,8 @@ extension AXUIElement {
         var value: AnyObject?
         let result = AXUIElementCopyAttributeValue(self, kAXPositionAttribute as CFString, &value)
         guard result == .success, let value, CFGetTypeID(value) == AXValueGetTypeID() else { return nil }
-        // swiftlint:disable:next force_cast
-        let axValue = value as! AXValue
+        // Safe: CFGetTypeID check above guarantees value is AXValue
+        let axValue = value as! AXValue // swiftlint:disable:this force_cast
         var point = CGPoint.zero
         AXValueGetValue(axValue, .cgPoint, &point)
         return point
@@ -36,8 +35,8 @@ extension AXUIElement {
         var value: AnyObject?
         let result = AXUIElementCopyAttributeValue(self, kAXSizeAttribute as CFString, &value)
         guard result == .success, let value, CFGetTypeID(value) == AXValueGetTypeID() else { return nil }
-        // swiftlint:disable:next force_cast
-        let axValue = value as! AXValue
+        // Safe: CFGetTypeID check above guarantees value is AXValue
+        let axValue = value as! AXValue // swiftlint:disable:this force_cast
         var size = CGSize.zero
         AXValueGetValue(axValue, .cgSize, &size)
         return size

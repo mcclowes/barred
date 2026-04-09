@@ -3,17 +3,15 @@ import Foundation
 
 @MainActor @Observable
 final class MenuBarController {
-    static let shared = MenuBarController()
-
     let accessibilityService = AccessibilityService()
-    private(set) var detector: MenuBarDetector!
+    let detector: MenuBarDetector
     let preferencesStore = PreferencesStore()
     let sectionDivider = SectionDivider()
     private(set) var isBarredBarVisible = false
     private var autoHideTask: Task<Void, Never>?
 
     var detectedItems: [MenuBarItem] {
-        detector?.detectedItems ?? []
+        detector.detectedItems
     }
 
     var preferences: UserPreferences {
@@ -72,8 +70,11 @@ final class MenuBarController {
         cancelAutoHide()
         let delay = preferences.autoHideDelay
         autoHideTask = Task {
-            try? await Task.sleep(for: .seconds(delay))
-            guard !Task.isCancelled else { return }
+            do {
+                try await Task.sleep(for: .seconds(delay))
+            } catch {
+                return
+            }
             isBarredBarVisible = false
             hideSection()
         }

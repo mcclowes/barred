@@ -2,16 +2,18 @@ import ServiceManagement
 import SwiftUI
 
 struct SettingsView: View {
-    @State private var controller = MenuBarController.shared
+    @Environment(MenuBarController.self) private var controller
 
     var body: some View {
         TabView {
-            ItemsSettingsView(controller: controller)
+            ItemsSettingsView()
+                .environment(controller)
                 .tabItem {
                     Label("Menu bar items", systemImage: "menubar.rectangle")
                 }
 
-            GeneralSettingsView(controller: controller)
+            GeneralSettingsView()
+                .environment(controller)
                 .tabItem {
                     Label("General", systemImage: "gear")
                 }
@@ -26,7 +28,7 @@ struct SettingsView: View {
 }
 
 struct ItemsSettingsView: View {
-    let controller: MenuBarController
+    @Environment(MenuBarController.self) private var controller
 
     private var visibleItems: [MenuBarItem] {
         controller.detectedItems.filter { !$0.isHidden }
@@ -49,7 +51,8 @@ struct ItemsSettingsView: View {
     var body: some View {
         VStack(alignment: .leading) {
             if !controller.accessibilityService.isTrusted {
-                OnboardingView(controller: controller)
+                OnboardingView()
+                    .environment(controller)
             } else if controller.detectedItems.isEmpty {
                 ContentUnavailableView(
                     "No items detected",
@@ -59,7 +62,7 @@ struct ItemsSettingsView: View {
             } else {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(
-                        "⌘-drag menu bar icons to rearrange them. Items to the left of the Barred divider (|) will be hidden."
+                        "\u{2318}-drag menu bar icons to rearrange them. Items to the left of the Barred divider (|) will be hidden."
                     )
                     .font(.callout)
                     .foregroundStyle(.secondary)
@@ -92,15 +95,14 @@ struct ItemsSettingsView: View {
 }
 
 struct GeneralSettingsView: View {
-    let controller: MenuBarController
+    @Environment(MenuBarController.self) private var controller
 
     var body: some View {
+        @Bindable var controller = controller
+
         Form {
-            Toggle("Launch at login", isOn: Binding(
-                get: { controller.preferences.launchAtLogin },
-                set: { newValue in
-                    controller.preferences.launchAtLogin = newValue
-                    controller.preferencesStore.save()
+            Toggle("Launch at login", isOn: $controller.preferences.launchAtLogin)
+                .onChange(of: controller.preferences.launchAtLogin) { _, newValue in
                     do {
                         if newValue {
                             try SMAppService.mainApp.register()
@@ -108,31 +110,16 @@ struct GeneralSettingsView: View {
                             try SMAppService.mainApp.unregister()
                         }
                     } catch {
-                        // Revert on failure
                         controller.preferences.launchAtLogin = !newValue
-                        controller.preferencesStore.save()
                     }
                 }
-            ))
 
-            Toggle("Show Barred bar on click", isOn: Binding(
-                get: { controller.preferences.showBarredBarOnClick },
-                set: { newValue in
-                    controller.preferences.showBarredBarOnClick = newValue
-                    controller.preferencesStore.save()
-                }
-            ))
+            Toggle("Show Barred bar on click", isOn: $controller.preferences.showBarredBarOnClick)
 
             HStack {
                 Text("Auto-hide delay")
                 Slider(
-                    value: Binding(
-                        get: { controller.preferences.autoHideDelay },
-                        set: { newValue in
-                            controller.preferences.autoHideDelay = newValue
-                            controller.preferencesStore.save()
-                        }
-                    ),
+                    value: $controller.preferences.autoHideDelay,
                     in: 1 ... 15,
                     step: 1
                 )
@@ -151,6 +138,7 @@ struct AboutView: View {
             Image(systemName: "menubar.arrow.up.rectangle")
                 .font(.system(size: 48))
                 .foregroundStyle(.tint)
+                .accessibilityHidden(true)
 
             Text("Barred")
                 .font(.title)
