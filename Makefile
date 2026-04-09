@@ -2,7 +2,7 @@ SCHEME = Barred
 PROJECT = Barred.xcodeproj
 BUILD_DIR = $(shell xcodebuild -project $(PROJECT) -scheme $(SCHEME) -showBuildSettings 2>/dev/null | grep -m1 'BUILT_PRODUCTS_DIR' | awk '{print $$NF}')
 
-.PHONY: build release app run test format format-check lint clean generate help
+.PHONY: build release app run test format format-check lint clean generate install-hooks help
 
 ## Build
 
@@ -36,6 +36,13 @@ lint: ## Run SwiftLint
 
 lint-fix: ## Auto-fix SwiftLint violations
 	swiftlint lint --fix
+
+## Hooks
+
+install-hooks: ## Install git pre-commit hook
+	cp Scripts/pre-commit .git/hooks/pre-commit
+	chmod +x .git/hooks/pre-commit
+	@echo "Pre-commit hook installed."
 
 ## Project
 

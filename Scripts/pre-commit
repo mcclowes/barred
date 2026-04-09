@@ -1,0 +1,22 @@
+#!/bin/sh
+# Pre-commit hook: check formatting and lint staged Swift files
+
+# Only run if there are staged Swift files
+STAGED_SWIFT=$(git diff --cached --name-only --diff-filter=ACM | grep '\.swift$')
+if [ -z "$STAGED_SWIFT" ]; then
+    exit 0
+fi
+
+echo "Running format check..."
+if ! make format-check 2>/dev/null; then
+    echo ""
+    echo "Format check failed. Run 'make format' to fix."
+    exit 1
+fi
+
+echo "Running lint..."
+if ! make lint 2>/dev/null; then
+    echo ""
+    echo "Lint failed. Run 'make lint-fix' to auto-fix, or fix manually."
+    exit 1
+fi
