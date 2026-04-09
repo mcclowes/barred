@@ -1,5 +1,6 @@
 import AppKit
 import ApplicationServices
+import os
 
 @MainActor
 protocol AccessibilityQuerying: AnyObject {
@@ -11,6 +12,7 @@ protocol AccessibilityQuerying: AnyObject {
 
 @MainActor @Observable
 final class AccessibilityService: AccessibilityQuerying {
+    private static let logger = Logger(subsystem: "com.mcclowes.barred", category: "AccessibilityService")
     private(set) var isTrusted = false
     init() {
         checkTrust()

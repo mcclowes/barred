@@ -18,7 +18,7 @@ struct UserPreferences: Codable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         autoHideDelay = try min(
-            60.0,
+            15.0,
             max(1.0, container.decodeIfPresent(TimeInterval.self, forKey: .autoHideDelay) ?? 5.0)
         )
         showBarredBarOnClick = try container.decodeIfPresent(Bool.self, forKey: .showBarredBarOnClick) ?? true

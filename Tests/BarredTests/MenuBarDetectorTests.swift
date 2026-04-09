@@ -6,7 +6,9 @@ private final class StubAccessibilityService: AccessibilityQuerying {
     var isTrusted = false
     func checkTrust() {}
     func requestTrust() {}
-    func enumerateAllExtrasItems() -> [AXMenuBarItemInfo] { [] }
+    func enumerateAllExtrasItems() -> [AXMenuBarItemInfo] {
+        []
+    }
 }
 
 @MainActor

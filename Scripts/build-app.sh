@@ -16,15 +16,24 @@ ZIP_PATH="$BUILD_DIR/$APP_NAME.zip"
 
 echo "Building $APP_NAME..."
 cd "$PROJECT_DIR"
-swift build -c release
+
+# Regenerate Xcode project if xcodegen is available
+if command -v xcodegen &>/dev/null && [ -f project.yml ]; then
+    xcodegen generate
+fi
+
+xcodebuild -project Barred.xcodeproj -scheme Barred -configuration Release \
+    CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO \
+    CONFIGURATION_BUILD_DIR="$BUILD_DIR/release" \
+    build
 
 echo "Creating app bundle..."
 rm -rf "$APP_BUNDLE"
 mkdir -p "$APP_BUNDLE/Contents/MacOS"
 mkdir -p "$APP_BUNDLE/Contents/Resources"
 
-# Copy executable
-cp "$BUILD_DIR/release/Barred" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
+# Copy executable from xcodebuild output
+cp "$BUILD_DIR/release/Barred.app/Contents/MacOS/Barred" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 
 # Copy Info.plist and resolve Xcode build variables
 cp "$PROJECT_DIR/Resources/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
@@ -87,7 +96,11 @@ if [ -n "$SIGN_IDENTITY" ]; then
     echo "Verifying signature..."
     codesign --verify --strict "$APP_BUNDLE"
     echo "Checking notarization requirements..."
-    spctl --assess --type execute --verbose "$APP_BUNDLE" || echo "  (spctl check may fail without notarization — this is expected pre-notarization)"
+    if [ -n "${CI:-}" ]; then
+        spctl --assess --type execute --verbose "$APP_BUNDLE"
+    else
+        spctl --assess --type execute --verbose "$APP_BUNDLE" || echo "  (spctl check may fail without notarization — this is expected pre-notarization)"
+    fi
 else
     echo "Warning: No signing identity found. Using ad-hoc signing (permissions may reset on rebuild)."
     echo "  Create a local cert named 'Barred Dev' in Keychain Access to fix this."

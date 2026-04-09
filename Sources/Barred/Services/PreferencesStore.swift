@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 @MainActor
 protocol PreferencesStoring: AnyObject {
@@ -7,6 +8,7 @@ protocol PreferencesStoring: AnyObject {
 
 @MainActor @Observable
 final class PreferencesStore: PreferencesStoring {
+    private static let logger = Logger(subsystem: "com.mcclowes.barred", category: "PreferencesStore")
     private static let key = "com.barred.preferences"
 
     var preferences: UserPreferences {

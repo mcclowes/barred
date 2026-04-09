@@ -5,7 +5,7 @@ import os
 @MainActor
 protocol SectionDividing: AnyObject {
     var isSectionHidden: Bool { get }
-    func setUp()
+    func setUp(onToggle: @escaping () -> Void)
     func expand()
     func collapse()
 }
@@ -18,6 +18,7 @@ final class SectionDivider: SectionDividing {
     private static let logger = Logger(subsystem: "com.mcclowes.barred", category: "SectionDivider")
     private var statusItem: NSStatusItem?
     private var isExpanded = false
+    private var actionTarget: ActionTarget?
 
     /// The collapsed length — a small dot visible as a section separator.
     private static let collapsedLength: Double = 20
@@ -29,14 +30,17 @@ final class SectionDivider: SectionDividing {
         let screenWidth = screen.frame.width
         // Use 2x screen width to handle ultrawide/5K displays, capped to
         // avoid the memory leak that occurs with extremely large values.
-        return min(screenWidth * 2, 10000)
+        return min(screenWidth * 2, 20000)
     }
 
     /// Create the divider status item. Must be called AFTER the main Barred
     /// status item exists, so the divider appears to its left.
-    func setUp() {
+    func setUp(onToggle: @escaping () -> Void) {
         guard statusItem == nil else { return }
         let item = NSStatusBar.system.statusItem(withLength: Self.collapsedLength)
+
+        let target = ActionTarget(action: onToggle)
+        actionTarget = target
 
         if let button = item.button {
             button.image = NSImage(
@@ -45,7 +49,8 @@ final class SectionDivider: SectionDividing {
             )
             button.image?.size = NSSize(width: 6, height: 16)
             button.imagePosition = .imageOnly
-            button.action = #selector(AppDelegate.toggleBarredBarFromDivider)
+            button.target = target
+            button.action = #selector(ActionTarget.performAction)
             button.sendAction(on: [.leftMouseUp])
         }
 
@@ -91,5 +96,17 @@ final class SectionDivider: SectionDividing {
 
     var isSectionHidden: Bool {
         isExpanded
+    }
+}
+
+private class ActionTarget: NSObject {
+    private let action: () -> Void
+
+    init(action: @escaping () -> Void) {
+        self.action = action
+    }
+
+    @objc func performAction() {
+        action()
     }
 }

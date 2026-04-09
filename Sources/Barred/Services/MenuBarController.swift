@@ -37,7 +37,9 @@ final class MenuBarController {
     /// Call after the main Barred status item has been created, so the
     /// divider appears to its left in the menu bar.
     func start() {
-        sectionDivider.setUp()
+        sectionDivider.setUp { [weak self] in
+            self?.toggleBarredBar()
+        }
 
         Task {
             await detector.waitForFirstScan()

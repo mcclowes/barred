@@ -10,11 +10,11 @@ struct UserPreferencesClampingTests {
         #expect(decoded.autoHideDelay == 1.0)
     }
 
-    @Test("autoHideDelay is clamped to maximum of 60.0 on decode")
+    @Test("autoHideDelay is clamped to maximum of 15.0 on decode")
     func clampMax() throws {
         let json = Data(#"{"autoHideDelay": 999}"#.utf8)
         let decoded = try JSONDecoder().decode(UserPreferences.self, from: json)
-        #expect(decoded.autoHideDelay == 60.0)
+        #expect(decoded.autoHideDelay == 15.0)
     }
 
     @Test("autoHideDelay at boundary values is accepted")
@@ -23,8 +23,8 @@ struct UserPreferencesClampingTests {
         let decodedMin = try JSONDecoder().decode(UserPreferences.self, from: jsonMin)
         #expect(decodedMin.autoHideDelay == 1.0)
 
-        let jsonMax = Data(#"{"autoHideDelay": 60.0}"#.utf8)
+        let jsonMax = Data(#"{"autoHideDelay": 15.0}"#.utf8)
         let decodedMax = try JSONDecoder().decode(UserPreferences.self, from: jsonMax)
-        #expect(decodedMax.autoHideDelay == 60.0)
+        #expect(decodedMax.autoHideDelay == 15.0)
     }
 }

@@ -69,10 +69,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    @objc func toggleBarredBarFromDivider() {
-        controller.toggleBarredBar()
-    }
-
     func applicationWillTerminate(_: Notification) {
         controller.restoreAll()
     }

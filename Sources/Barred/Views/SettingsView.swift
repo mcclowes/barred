@@ -50,7 +50,6 @@ struct ItemsSettingsView: View {
         VStack(alignment: .leading) {
             if !controller.accessibilityService.isTrusted {
                 OnboardingView()
-                    .environment(controller)
             } else if controller.detectedItems.isEmpty {
                 ContentUnavailableView(
                     "No items detected",

@@ -11,7 +11,6 @@ struct MenuBarItemTests {
         itemIndex: Int = 0
     ) -> MenuBarItem {
         MenuBarItem(
-            id: "\(pid)-\(itemIndex)",
             pid: pid,
             appName: appName,
             bundleIdentifier: bundleIdentifier,
@@ -71,17 +70,17 @@ struct MenuBarItemTests {
         #expect(item.persistenceKey == "com.test:item-3")
     }
 
-    @Test("equality is based on id")
+    @Test("equality is based on id (bundleIdentifier + title)")
     func equality() {
-        let a = makeItem(pid: 1, appName: "A", itemIndex: 0)
-        let b = makeItem(pid: 1, appName: "B", itemIndex: 0)
+        let a = makeItem(pid: 1, appName: "A", bundleIdentifier: "com.test", title: "X", itemIndex: 0)
+        let b = makeItem(pid: 2, appName: "B", bundleIdentifier: "com.test", title: "X", itemIndex: 0)
         #expect(a == b)
     }
 
     @Test("different ids are not equal")
     func inequality() {
-        let a = makeItem(pid: 1, itemIndex: 0)
-        let b = makeItem(pid: 1, itemIndex: 1)
+        let a = makeItem(bundleIdentifier: "com.test", title: "X")
+        let b = makeItem(bundleIdentifier: "com.test", title: "Y")
         #expect(a != b)
     }
 }

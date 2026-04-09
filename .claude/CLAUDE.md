@@ -21,7 +21,7 @@ make format              # auto-format (swiftformat)
 make format-check        # check formatting
 make lint                # run SwiftLint (strict)
 make lint-fix            # auto-fix SwiftLint violations
-make xcode               # regenerate Xcode project from project.yml
+make generate            # regenerate Xcode project from project.yml
 make clean               # remove build artifacts
 make help                # show available targets
 ```

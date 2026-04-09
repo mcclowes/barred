@@ -6,7 +6,9 @@ private final class MockAccessibilityService: AccessibilityQuerying {
     var isTrusted = true
     func checkTrust() {}
     func requestTrust() {}
-    func enumerateAllExtrasItems() -> [AXMenuBarItemInfo] { [] }
+    func enumerateAllExtrasItems() -> [AXMenuBarItemInfo] {
+        []
+    }
 }
 
 @MainActor
@@ -16,8 +18,14 @@ private final class MockDetector: MenuBarDetecting {
     var scanningStarted = false
     var scanningStopped = false
 
-    func startScanning() { scanningStarted = true }
-    func stopScanning() { scanningStopped = true }
+    func startScanning() {
+        scanningStarted = true
+    }
+
+    func stopScanning() {
+        scanningStopped = true
+    }
+
     func scan() {}
     func waitForFirstScan() async {}
 }
@@ -29,9 +37,19 @@ private final class MockSectionDivider: SectionDividing {
     var expandCallCount = 0
     var collapseCallCount = 0
 
-    func setUp() { setUpCalled = true }
-    func expand() { expandCallCount += 1; isSectionHidden = true }
-    func collapse() { collapseCallCount += 1; isSectionHidden = false }
+    func setUp(onToggle _: @escaping () -> Void) {
+        setUpCalled = true
+    }
+
+    func expand() {
+        expandCallCount += 1
+        isSectionHidden = true
+    }
+
+    func collapse() {
+        collapseCallCount += 1
+        isSectionHidden = false
+    }
 }
 
 @MainActor

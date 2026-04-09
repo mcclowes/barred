@@ -52,6 +52,8 @@ final class MenuBarDetector: MenuBarDetecting {
     }
 
     func scan() {
+        accessibilityService.checkTrust()
+
         var items: [MenuBarItem] = if accessibilityService.isTrusted {
             detectViaAccessibility()
         } else {
@@ -63,7 +65,10 @@ final class MenuBarDetector: MenuBarDetecting {
         if detectedItems.count != items.count || detectedItems.map(\.displayName) != items.map(\.displayName) {
             Self.logger.debug("Detected \(items.count) menu bar items")
             for item in items {
-                Self.logger.debug("  - \(item.displayName) [\(item.appName)] (wid: \(item.windowID), x: \(Int(item.frame.origin.x)))")
+                Self.logger
+                    .debug(
+                        "  - \(item.displayName) [\(item.appName)] (wid: \(item.windowID), x: \(Int(item.frame.origin.x)))"
+                    )
             }
         }
 
@@ -94,7 +99,6 @@ final class MenuBarDetector: MenuBarDetecting {
             )
 
             return MenuBarItem(
-                id: "\(axItem.pid)-\(axItem.indexInApp)",
                 pid: axItem.pid,
                 appName: axItem.appName,
                 bundleIdentifier: axItem.bundleIdentifier,
@@ -184,7 +188,6 @@ final class MenuBarDetector: MenuBarDetecting {
             itemIndex[window.pid] = index + 1
 
             return MenuBarItem(
-                id: "\(window.pid)-\(window.windowID)",
                 pid: window.pid,
                 appName: app?.localizedName ?? "Unknown",
                 bundleIdentifier: app?.bundleIdentifier,
@@ -204,9 +207,10 @@ final class MenuBarDetector: MenuBarDetecting {
         var seen = Set<String>()
         var result: [MenuBarItem] = []
 
+        let primaryFrame = NSScreen.main?.frame ?? .zero
         let primaryFirst = items.sorted { a, b in
-            let aOnPrimary = a.frame.origin.x >= 0
-            let bOnPrimary = b.frame.origin.x >= 0
+            let aOnPrimary = primaryFrame.contains(CGPoint(x: a.frame.midX, y: a.frame.midY))
+            let bOnPrimary = primaryFrame.contains(CGPoint(x: b.frame.midX, y: b.frame.midY))
             if aOnPrimary != bOnPrimary { return aOnPrimary }
             return a.frame.origin.x < b.frame.origin.x
         }

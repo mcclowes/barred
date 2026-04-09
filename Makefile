@@ -2,7 +2,7 @@ SCHEME = Barred
 PROJECT = Barred.xcodeproj
 BUILD_DIR = $(shell xcodebuild -project $(PROJECT) -scheme $(SCHEME) -showBuildSettings 2>/dev/null | grep -m1 'BUILT_PRODUCTS_DIR' | awk '{print $$NF}')
 
-.PHONY: build release app run test format format-check lint clean xcode help
+.PHONY: build release app run test format format-check lint clean generate help
 
 ## Build
 
@@ -39,7 +39,7 @@ lint-fix: ## Auto-fix SwiftLint violations
 
 ## Project
 
-xcode: ## Regenerate Xcode project from project.yml
+generate: ## Regenerate Xcode project from project.yml
 	xcodegen generate
 
 clean: ## Remove build artifacts
