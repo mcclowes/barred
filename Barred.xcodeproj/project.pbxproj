@@ -28,6 +28,7 @@
 		A287CDDB2698B477793FF698 /* BarredMenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8574DCFBCF023B25D751326 /* BarredMenuView.swift */; };
 		D1AF1132537FEC9B355CB99E /* MenuBarDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3464AAA91A238A54B51237B6 /* MenuBarDetectorTests.swift */; };
 		D848409798B41609EAAA050B /* AccessibilityServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C83C2FC0169CBE3440B50EC /* AccessibilityServiceTests.swift */; };
+		E4EEBBC3CA2900C627E8813F /* ScreenCaptureKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F7330DAC71FCA6EAEE14367B /* ScreenCaptureKit.framework */; };
 		E76363CD417C071E6CE3CBFE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E42204F30349C8D78F2399CE /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
@@ -65,8 +66,20 @@
 		E42204F30349C8D78F2399CE /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		E6F08C97D5DD2A0DE86D6C00 /* MenuBarDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarDetector.swift; sourceTree = "<group>"; };
 		F19B89A24F09E83CB487DEC3 /* UserPreferencesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserPreferencesTests.swift; sourceTree = "<group>"; };
+		F7330DAC71FCA6EAEE14367B /* ScreenCaptureKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ScreenCaptureKit.framework; path = System/Library/Frameworks/ScreenCaptureKit.framework; sourceTree = SDKROOT; };
 		F8574DCFBCF023B25D751326 /* BarredMenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarredMenuView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		2233AAD9BECD7BED881F08FE /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E4EEBBC3CA2900C627E8813F /* ScreenCaptureKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		16D2CAE920222A1BB371140B /* Views */ = {
@@ -116,6 +129,7 @@
 				886B3C94314AE72E38528C94 /* Barred */,
 				F9C3E709ED66244D366B21B2 /* BarredTests */,
 				7E52FEC3FF9531F677FAEF42 /* Resources */,
+				F5B5CF1B64264973B67982FF /* Frameworks */,
 				8AC582EF7AC665C9DA427CB9 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -139,6 +153,14 @@
 				17AD5B193DEAA49B8845FB99 /* SectionDivider.swift */,
 			);
 			path = Services;
+			sourceTree = "<group>";
+		};
+		F5B5CF1B64264973B67982FF /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				F7330DAC71FCA6EAEE14367B /* ScreenCaptureKit.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 		F9C3E709ED66244D366B21B2 /* BarredTests */ = {
@@ -192,6 +214,7 @@
 			buildPhases = (
 				EB84FB57C009BC55125CEC43 /* Sources */,
 				7F7B713E8D22CB31EC67C463 /* Resources */,
+				2233AAD9BECD7BED881F08FE /* Frameworks */,
 			);
 			buildRules = (
 			);

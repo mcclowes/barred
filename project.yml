@@ -20,6 +20,8 @@ targets:
     sources:
       - Sources/Barred
       - path: Resources/Assets.xcassets
+    dependencies:
+      - sdk: ScreenCaptureKit.framework
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mcclowes.barred

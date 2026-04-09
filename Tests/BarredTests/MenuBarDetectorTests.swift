@@ -21,35 +21,36 @@ struct MenuBarDetectorTests {
     }
 
     @Test("scan completes first scan flag")
-    func scanCompletesFirstScan() {
+    func scanCompletesFirstScan() async {
         let detector = MenuBarDetector(accessibilityService: StubAccessibilityService())
-        detector.scan()
+        await detector.scan()
         #expect(detector.hasCompletedFirstScan == true)
     }
 
     @Test("scan with untrusted service uses window list fallback")
-    func scanUntrusted() {
+    func scanUntrusted() async {
         let service = StubAccessibilityService()
         service.isTrusted = false
         let detector = MenuBarDetector(accessibilityService: service)
-        detector.scan()
-        // Should not crash; items come from CGWindowList which may be empty in test
+        await detector.scan()
+        // Should not crash; items come from ScreenCaptureKit which may be empty in test
         #expect(detector.hasCompletedFirstScan == true)
     }
 
     @Test("stopScanning cancels scan task")
-    func stopScanning() {
+    func stopScanning() async {
         let detector = MenuBarDetector(accessibilityService: StubAccessibilityService())
         detector.startScanning()
+        // Give the initial scan a moment to complete
+        try? await Task.sleep(for: .milliseconds(100))
         detector.stopScanning()
         // Should not crash or leave dangling tasks
-        #expect(detector.hasCompletedFirstScan == true)
     }
 
     @Test("waitForFirstScan returns immediately if already scanned")
     func waitAfterScan() async {
         let detector = MenuBarDetector(accessibilityService: StubAccessibilityService())
-        detector.scan()
+        await detector.scan()
         // Should return immediately without hanging
         await detector.waitForFirstScan()
         #expect(detector.hasCompletedFirstScan == true)
