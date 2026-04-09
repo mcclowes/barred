@@ -4,6 +4,8 @@ BUILD_DIR = $(shell xcodebuild -project $(PROJECT) -scheme $(SCHEME) -showBuildS
 
 .PHONY: build release app run test format format-check lint clean xcode help
 
+## Build
+
 build: ## Debug build
 	xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration Debug build
 
@@ -16,16 +18,26 @@ app: ## Build .app bundle (signed, notarizable)
 run: build ## Build and run
 	open "$(BUILD_DIR)/Barred.app"
 
+## Test
+
 test: ## Run tests
 	xcodebuild -project $(PROJECT) -scheme BarredTests -configuration Debug test
 
-format: ## Auto-format Swift files
+## Lint & format
+
+format: ## Auto-format Swift files (swiftformat)
 	swiftformat Sources/ Tests/
 
 format-check: ## Check formatting without changes
 	swiftformat --lint Sources/ Tests/
 
-lint: format-check ## Alias for format-check
+lint: ## Run SwiftLint
+	swiftlint lint --strict
+
+lint-fix: ## Auto-fix SwiftLint violations
+	swiftlint lint --fix
+
+## Project
 
 xcode: ## Regenerate Xcode project from project.yml
 	xcodegen generate
@@ -35,4 +47,4 @@ clean: ## Remove build artifacts
 	rm -rf .build/Barred.app .build/Barred.zip
 
 help: ## Show available targets
-	@grep -E '^[a-zA-Z_-]+:.*?##' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-12s %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?##' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-14s %s\n", $$1, $$2}'

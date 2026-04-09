@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import os
 
 @MainActor
 protocol SectionDividing: AnyObject {
@@ -14,6 +15,7 @@ protocol SectionDividing: AnyObject {
 /// left off-screen — the same technique used by Dozer and Hidden Bar.
 @MainActor
 final class SectionDivider: SectionDividing {
+    private static let logger = Logger(subsystem: "com.mcclowes.barred", category: "SectionDivider")
     private var statusItem: NSStatusItem?
     private var isExpanded = false
 
@@ -53,17 +55,13 @@ final class SectionDivider: SectionDividing {
     /// Expand the divider to push items to its left off-screen.
     func expand() {
         guard let statusItem else {
-            #if DEBUG
-                print("[Barred] expand() skipped — statusItem is nil (setUp not called yet?)")
-            #endif
+            Self.logger.debug("expand() skipped — statusItem is nil (setUp not called yet?)")
             return
         }
         guard !isExpanded else { return }
         isExpanded = true
         let length = expandedLength
-        #if DEBUG
-            print("[Barred] Expanding divider to \(length)px")
-        #endif
+        Self.logger.debug("Expanding divider to \(length)px")
         statusItem.length = length
         if let button = statusItem.button {
             button.image = nil
@@ -74,16 +72,12 @@ final class SectionDivider: SectionDividing {
     /// Collapse the divider to reveal hidden items.
     func collapse() {
         guard let statusItem else {
-            #if DEBUG
-                print("[Barred] collapse() skipped — statusItem is nil")
-            #endif
+            Self.logger.debug("collapse() skipped — statusItem is nil")
             return
         }
         guard isExpanded else { return }
         isExpanded = false
-        #if DEBUG
-            print("[Barred] Collapsing divider to \(Self.collapsedLength)px")
-        #endif
+        Self.logger.debug("Collapsing divider to \(Self.collapsedLength)px")
         statusItem.length = Self.collapsedLength
         if let button = statusItem.button {
             button.title = ""

@@ -1,5 +1,6 @@
 import AppKit
 import ApplicationServices
+import os
 
 @MainActor
 protocol MenuBarDetecting: AnyObject {
@@ -13,6 +14,7 @@ protocol MenuBarDetecting: AnyObject {
 
 @MainActor @Observable
 final class MenuBarDetector: MenuBarDetecting {
+    private static let logger = Logger(subsystem: "com.mcclowes.barred", category: "MenuBarDetector")
     private let accessibilityService: AccessibilityQuerying
     private(set) var detectedItems: [MenuBarItem] = []
     private(set) var hasCompletedFirstScan = false
@@ -58,16 +60,12 @@ final class MenuBarDetector: MenuBarDetecting {
 
         items = deduplicateAcrossScreens(items)
 
-        #if DEBUG
-            if detectedItems.count != items.count || detectedItems.map(\.displayName) != items.map(\.displayName) {
-                print("[Barred] Detected \(items.count) menu bar items:")
-                for item in items {
-                    print(
-                        "  - \(item.displayName) [\(item.appName)] (wid: \(item.windowID), x: \(Int(item.frame.origin.x)))"
-                    )
-                }
+        if detectedItems.count != items.count || detectedItems.map(\.displayName) != items.map(\.displayName) {
+            Self.logger.debug("Detected \(items.count) menu bar items")
+            for item in items {
+                Self.logger.debug("  - \(item.displayName) [\(item.appName)] (wid: \(item.windowID), x: \(Int(item.frame.origin.x)))")
             }
-        #endif
+        }
 
         detectedItems = items
 

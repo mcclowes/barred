@@ -17,6 +17,10 @@ make release             # release build
 make app                 # build .app bundle via Scripts/build-app.sh
 make run                 # build and run
 make test                # run tests
+make format              # auto-format (swiftformat)
+make format-check        # check formatting
+make lint                # run SwiftLint (strict)
+make lint-fix            # auto-fix SwiftLint violations
 make xcode               # regenerate Xcode project from project.yml
 make clean               # remove build artifacts
 make help                # show available targets

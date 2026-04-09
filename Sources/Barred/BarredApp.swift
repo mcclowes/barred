@@ -1,8 +1,10 @@
 import AppKit
+import os
 import SwiftUI
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    private static let logger = Logger(subsystem: "com.mcclowes.barred", category: "AppDelegate")
     let controller: MenuBarController
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
@@ -49,9 +51,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if shouldToggleBar {
             controller.accessibilityService.checkTrust()
             if !controller.accessibilityService.isTrusted {
-                #if DEBUG
-                    print("[Barred] AXIsProcessTrusted = false, requesting trust")
-                #endif
+                Self.logger.info("AXIsProcessTrusted = false, requesting trust")
                 controller.accessibilityService.requestTrust()
             }
             controller.toggleBarredBar()

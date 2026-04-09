@@ -1,8 +1,10 @@
 import AppKit
 import Foundation
+import os
 
 @MainActor @Observable
 final class MenuBarController {
+    private static let logger = Logger(subsystem: "com.mcclowes.barred", category: "MenuBarController")
     let accessibilityService: AccessibilityQuerying
     let detector: MenuBarDetecting
     let preferencesStore: PreferencesStoring
@@ -45,9 +47,7 @@ final class MenuBarController {
 
     func toggleBarredBar() {
         isBarredBarVisible.toggle()
-        #if DEBUG
-            print("[Barred] toggleBarredBar → isBarredBarVisible=\(isBarredBarVisible)")
-        #endif
+        Self.logger.debug("toggleBarredBar → isBarredBarVisible=\(self.isBarredBarVisible)")
 
         if isBarredBarVisible {
             showSection()
