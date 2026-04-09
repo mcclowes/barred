@@ -1,8 +1,7 @@
+@testable import Barred
 import Foundation
 import Testing
-@testable import Barred
 
-@Suite("UserPreferences")
 struct UserPreferencesTests {
     @Test("defaults are sensible")
     func defaults() {

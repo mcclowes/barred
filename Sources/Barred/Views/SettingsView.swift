@@ -33,7 +33,7 @@ struct ItemsSettingsView: View {
     }
 
     private var hiddenItems: [MenuBarItem] {
-        controller.detectedItems.filter { $0.isHidden }
+        controller.detectedItems.filter(\.isHidden)
     }
 
     private var appsWithMultipleItems: Set<String> {
@@ -58,10 +58,12 @@ struct ItemsSettingsView: View {
                 )
             } else {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("⌘-drag menu bar icons to rearrange them. Items to the left of the Barred divider (|) will be hidden.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 4)
+                    Text(
+                        "⌘-drag menu bar icons to rearrange them. Items to the left of the Barred divider (|) will be hidden."
+                    )
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 4)
 
                     List {
                         Section {
@@ -131,7 +133,7 @@ struct GeneralSettingsView: View {
                             controller.preferencesStore.save()
                         }
                     ),
-                    in: 1...15,
+                    in: 1 ... 15,
                     step: 1
                 )
                 Text("\(Int(controller.preferences.autoHideDelay))s")

@@ -2,7 +2,7 @@ SCHEME = Barred
 PROJECT = Barred.xcodeproj
 BUILD_DIR = $(shell xcodebuild -project $(PROJECT) -scheme $(SCHEME) -showBuildSettings 2>/dev/null | grep -m1 'BUILT_PRODUCTS_DIR' | awk '{print $$NF}')
 
-.PHONY: build release app run test clean xcode help
+.PHONY: build release app run test format format-check lint clean xcode help
 
 build: ## Debug build
 	xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration Debug build
@@ -18,6 +18,14 @@ run: build ## Build and run
 
 test: ## Run tests
 	xcodebuild -project $(PROJECT) -scheme BarredTests -configuration Debug test
+
+format: ## Auto-format Swift files
+	swiftformat Sources/ Tests/
+
+format-check: ## Check formatting without changes
+	swiftformat --lint Sources/ Tests/
+
+lint: format-check ## Alias for format-check
 
 xcode: ## Regenerate Xcode project from project.yml
 	xcodegen generate

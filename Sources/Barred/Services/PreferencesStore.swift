@@ -7,7 +7,8 @@ final class PreferencesStore {
 
     init() {
         if let data = UserDefaults.standard.data(forKey: Self.key),
-           let decoded = try? JSONDecoder().decode(UserPreferences.self, from: data) {
+           let decoded = try? JSONDecoder().decode(UserPreferences.self, from: data)
+        {
             preferences = decoded
         } else {
             preferences = UserPreferences()

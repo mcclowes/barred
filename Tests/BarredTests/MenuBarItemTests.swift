@@ -1,8 +1,7 @@
+@testable import Barred
 import Darwin
 import Testing
-@testable import Barred
 
-@Suite("MenuBarItem")
 struct MenuBarItemTests {
     private func makeItem(
         pid: Int32 = 123,

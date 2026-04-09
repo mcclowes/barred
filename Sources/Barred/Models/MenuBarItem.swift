@@ -38,7 +38,8 @@ struct MenuBarItem: Identifiable {
 
     var appIcon: NSImage? {
         if let bundleIdentifier,
-           let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) {
+           let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier)
+        {
             return NSWorkspace.shared.icon(forFile: url.path)
         }
         return NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier ?? "").first?.icon

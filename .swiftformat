@@ -1,0 +1,18 @@
+# SwiftFormat configuration for Barred
+--swiftversion 6.0
+
+# Rules
+--enable isEmpty
+--disable redundantSelf
+--disable trailingCommas
+
+# Formatting
+--indent 4
+--indentcase false
+--trimwhitespace always
+--voidtype void
+--wraparguments before-first
+--wrapparameters before-first
+--wrapcollections before-first
+--maxwidth 120
+--semicolons never

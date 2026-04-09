@@ -28,12 +28,10 @@ final class MenuBarDetector {
     }
 
     func scan() {
-        var items: [MenuBarItem]
-
-        if accessibilityService.isTrusted {
-            items = detectViaAccessibility()
+        var items: [MenuBarItem] = if accessibilityService.isTrusted {
+            detectViaAccessibility()
         } else {
-            items = detectViaWindowList()
+            detectViaWindowList()
         }
 
         items = deduplicateAcrossScreens(items)
@@ -41,7 +39,9 @@ final class MenuBarDetector {
         if detectedItems.count != items.count || detectedItems.map(\.displayName) != items.map(\.displayName) {
             print("[Barred] Detected \(items.count) menu bar items:")
             for item in items {
-                print("  - \(item.displayName) [\(item.appName)] (wid: \(item.windowID), x: \(Int(item.frame.origin.x)))")
+                print(
+                    "  - \(item.displayName) [\(item.appName)] (wid: \(item.windowID), x: \(Int(item.frame.origin.x)))"
+                )
             }
         }
 
@@ -56,7 +56,7 @@ final class MenuBarDetector {
 
         return axItems.compactMap { axItem -> MenuBarItem? in
             // Filter out untitled Control Centre items (spacers/separators)
-            if axItem.bundleIdentifier == "com.apple.controlcenter" && axItem.title == nil {
+            if axItem.bundleIdentifier == "com.apple.controlcenter", axItem.title == nil {
                 return nil
             }
 
