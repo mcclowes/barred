@@ -1,4 +1,6 @@
-# Barred
+# barred
+
+[![Release](https://github.com/mcclowes/barred/actions/workflows/release.yml/badge.svg)](https://github.com/mcclowes/barred/actions/workflows/release.yml)
 
 A macOS menu bar manager. Detects and organises menu bar items from other apps — hide, reorder, or tuck them into a secondary bar.
 
