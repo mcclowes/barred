@@ -1,7 +1,12 @@
 import Foundation
 
+@MainActor
+protocol PreferencesStoring: AnyObject {
+    var preferences: UserPreferences { get set }
+}
+
 @MainActor @Observable
-final class PreferencesStore {
+final class PreferencesStore: PreferencesStoring {
     private static let key = "com.barred.preferences"
 
     var preferences: UserPreferences {

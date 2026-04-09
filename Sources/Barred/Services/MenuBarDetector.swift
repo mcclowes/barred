@@ -1,14 +1,33 @@
 import AppKit
 import ApplicationServices
 
-@MainActor @Observable
-final class MenuBarDetector {
-    private let accessibilityService: AccessibilityService
-    private(set) var detectedItems: [MenuBarItem] = []
-    private var scanTask: Task<Void, Never>?
+@MainActor
+protocol MenuBarDetecting: AnyObject {
+    var detectedItems: [MenuBarItem] { get }
+    var hasCompletedFirstScan: Bool { get }
+    func startScanning()
+    func stopScanning()
+    func scan()
+    func waitForFirstScan() async
+}
 
-    init(accessibilityService: AccessibilityService) {
+@MainActor @Observable
+final class MenuBarDetector: MenuBarDetecting {
+    private let accessibilityService: AccessibilityQuerying
+    private(set) var detectedItems: [MenuBarItem] = []
+    private(set) var hasCompletedFirstScan = false
+    private var scanTask: Task<Void, Never>?
+    private var firstScanContinuation: CheckedContinuation<Void, Never>?
+
+    init(accessibilityService: AccessibilityQuerying) {
         self.accessibilityService = accessibilityService
+    }
+
+    func waitForFirstScan() async {
+        if hasCompletedFirstScan { return }
+        await withCheckedContinuation { continuation in
+            firstScanContinuation = continuation
+        }
     }
 
     func startScanning() {
@@ -51,6 +70,12 @@ final class MenuBarDetector {
         #endif
 
         detectedItems = items
+
+        if !hasCompletedFirstScan {
+            hasCompletedFirstScan = true
+            firstScanContinuation?.resume()
+            firstScanContinuation = nil
+        }
     }
 
     // MARK: - AX-based detection enriched with window IDs

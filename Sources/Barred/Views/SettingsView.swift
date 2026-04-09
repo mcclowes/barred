@@ -7,13 +7,11 @@ struct SettingsView: View {
     var body: some View {
         TabView {
             ItemsSettingsView()
-                .environment(controller)
                 .tabItem {
                     Label("Menu bar items", systemImage: "menubar.rectangle")
                 }
 
             GeneralSettingsView()
-                .environment(controller)
                 .tabItem {
                     Label("General", systemImage: "gear")
                 }

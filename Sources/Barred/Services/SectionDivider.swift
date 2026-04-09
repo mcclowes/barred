@@ -1,11 +1,19 @@
 import AppKit
 import Foundation
 
+@MainActor
+protocol SectionDividing: AnyObject {
+    var isSectionHidden: Bool { get }
+    func setUp()
+    func expand()
+    func collapse()
+}
+
 /// Manages an NSStatusItem that acts as a divider between visible and hidden
 /// sections of the menu bar. Expanding its length pushes everything to its
 /// left off-screen — the same technique used by Dozer and Hidden Bar.
 @MainActor
-final class SectionDivider {
+final class SectionDivider: SectionDividing {
     private var statusItem: NSStatusItem?
     private var isExpanded = false
 

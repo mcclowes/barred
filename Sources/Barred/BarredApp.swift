@@ -35,21 +35,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func statusItemClicked(_ sender: NSStatusBarButton) {
         let event = NSApp.currentEvent
         let optionHeld = event?.modifierFlags.contains(.option) == true
+        let clickTogglesBar = controller.preferences.showBarredBarOnClick
 
-        if optionHeld {
+        // Normal click: toggle bar (or popover if showBarredBarOnClick is off)
+        // Option-click: the opposite action
+        let shouldToggleBar = clickTogglesBar != optionHeld
+
+        if shouldToggleBar {
+            controller.accessibilityService.checkTrust()
+            if !controller.accessibilityService.isTrusted {
+                #if DEBUG
+                print("[Barred] AXIsProcessTrusted = false, requesting trust")
+                #endif
+                controller.accessibilityService.requestTrust()
+            }
+            controller.toggleBarredBar()
+        } else {
             togglePopover(sender)
-            return
         }
-
-        controller.accessibilityService.checkTrust()
-        if !controller.accessibilityService.isTrusted {
-            #if DEBUG
-            print("[Barred] AXIsProcessTrusted = false, requesting trust")
-            #endif
-            controller.accessibilityService.requestTrust()
-        }
-
-        controller.toggleBarredBar()
     }
 
     private func togglePopover(_ sender: NSStatusBarButton) {
@@ -63,11 +66,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc func toggleBarredBarFromDivider() {
         controller.toggleBarredBar()
-    }
-
-    private func quitApp() {
-        controller.restoreAll()
-        NSApp.terminate(nil)
     }
 
     func applicationWillTerminate(_: Notification) {

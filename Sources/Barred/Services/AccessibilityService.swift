@@ -1,8 +1,16 @@
 import AppKit
 import ApplicationServices
 
+@MainActor
+protocol AccessibilityQuerying: AnyObject {
+    var isTrusted: Bool { get }
+    func checkTrust()
+    func requestTrust()
+    func enumerateAllExtrasItems() -> [AXMenuBarItemInfo]
+}
+
 @MainActor @Observable
-final class AccessibilityService {
+final class AccessibilityService: AccessibilityQuerying {
     private(set) var isTrusted = false
     init() {
         checkTrust()

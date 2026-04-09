@@ -3,10 +3,10 @@ import Foundation
 
 @MainActor @Observable
 final class MenuBarController {
-    let accessibilityService = AccessibilityService()
-    let detector: MenuBarDetector
-    let preferencesStore = PreferencesStore()
-    let sectionDivider = SectionDivider()
+    let accessibilityService: AccessibilityQuerying
+    let detector: MenuBarDetecting
+    let preferencesStore: PreferencesStoring
+    let sectionDivider: SectionDividing
     private(set) var isBarredBarVisible = false
     private var autoHideTask: Task<Void, Never>?
 
@@ -19,9 +19,17 @@ final class MenuBarController {
         set { preferencesStore.preferences = newValue }
     }
 
-    init() {
-        detector = MenuBarDetector(accessibilityService: accessibilityService)
-        detector.startScanning()
+    init(
+        accessibilityService: AccessibilityQuerying = AccessibilityService(),
+        detector: MenuBarDetecting? = nil,
+        preferencesStore: PreferencesStoring = PreferencesStore(),
+        sectionDivider: SectionDividing = SectionDivider()
+    ) {
+        self.accessibilityService = accessibilityService
+        self.preferencesStore = preferencesStore
+        self.sectionDivider = sectionDivider
+        self.detector = detector ?? MenuBarDetector(accessibilityService: accessibilityService)
+        self.detector.startScanning()
     }
 
     /// Call after the main Barred status item has been created, so the
@@ -29,9 +37,8 @@ final class MenuBarController {
     func start() {
         sectionDivider.setUp()
 
-        // Hide the section after first scan completes
         Task {
-            try? await Task.sleep(for: .seconds(1))
+            await detector.waitForFirstScan()
             hideSection()
         }
     }
@@ -53,6 +60,7 @@ final class MenuBarController {
 
     func restoreAll() {
         cancelAutoHide()
+        detector.stopScanning()
         sectionDivider.collapse()
     }
 
@@ -75,6 +83,7 @@ final class MenuBarController {
             } catch {
                 return
             }
+            guard isBarredBarVisible else { return }
             isBarredBarVisible = false
             hideSection()
         }
