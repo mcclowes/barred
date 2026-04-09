@@ -3,9 +3,14 @@ import SwiftUI
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    let controller = MenuBarController()
+    let controller: MenuBarController
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
+
+    override init() {
+        self.controller = MenuBarController()
+        super.init()
+    }
 
     func applicationDidFinishLaunching(_: Notification) {
         NSApp.setActivationPolicy(.accessory)
