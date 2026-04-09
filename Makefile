@@ -24,7 +24,7 @@ xcode: ## Regenerate Xcode project from project.yml
 
 clean: ## Remove build artifacts
 	xcodebuild -project $(PROJECT) -scheme $(SCHEME) clean
-	rm -rf .build/Barred.app
+	rm -rf .build/Barred.app .build/Barred.zip
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?##' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-12s %s\n", $$1, $$2}'

@@ -51,9 +51,18 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          KEYCHAIN_PATH: ${{ runner.temp }}/signing.keychain-db
         run: |
           chmod +x Scripts/build-app.sh
           Scripts/build-app.sh
+
+      - name: Clean up keychain
+        if: always()
+        run: |
+          KEYCHAIN_PATH=${{ runner.temp }}/signing.keychain-db
+          if [ -f "$KEYCHAIN_PATH" ]; then
+            security delete-keychain "$KEYCHAIN_PATH"
+          fi
 
       - name: Get SHA256
         run: |

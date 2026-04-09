@@ -42,20 +42,34 @@ final class SectionDivider {
 
     /// Expand the divider to push items to its left off-screen.
     func expand() {
-        guard let statusItem, !isExpanded else { return }
+        guard let statusItem else {
+            print("[Barred] expand() skipped — statusItem is nil (setUp not called yet?)")
+            return
+        }
+        guard !isExpanded else { return }
         isExpanded = true
-        statusItem.length = expandedLength
+        let length = expandedLength
+        print("[Barred] Expanding divider to \(length)px")
+        statusItem.length = length
+        // Keep button content so macOS allocates the full requested width
         if let button = statusItem.button {
             button.image = nil
+            button.title = " "
         }
     }
 
     /// Collapse the divider to reveal hidden items.
     func collapse() {
-        guard let statusItem, isExpanded else { return }
+        guard let statusItem else {
+            print("[Barred] collapse() skipped — statusItem is nil")
+            return
+        }
+        guard isExpanded else { return }
         isExpanded = false
+        print("[Barred] Collapsing divider to \(Self.collapsedLength)px")
         statusItem.length = Self.collapsedLength
         if let button = statusItem.button {
+            button.title = ""
             button.image = NSImage(
                 systemSymbolName: "line.vertical",
                 accessibilityDescription: "Barred section divider"

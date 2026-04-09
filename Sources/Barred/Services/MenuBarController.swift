@@ -11,7 +11,6 @@ final class MenuBarController {
     let sectionDivider = SectionDivider()
     private(set) var isBarredBarVisible = false
     private var autoHideTask: Task<Void, Never>?
-    private var isTransitioning = false
 
     var detectedItems: [MenuBarItem] {
         detector?.detectedItems ?? []
@@ -25,8 +24,14 @@ final class MenuBarController {
     init() {
         detector = MenuBarDetector(accessibilityService: accessibilityService)
         detector.startScanning()
+    }
 
-        // Hide the section after first scan
+    /// Call after the main Barred status item has been created, so the
+    /// divider appears to its left in the menu bar.
+    func start() {
+        sectionDivider.setUp()
+
+        // Hide the section after first scan completes
         Task {
             try? await Task.sleep(for: .seconds(1))
             hideSection()
@@ -34,9 +39,8 @@ final class MenuBarController {
     }
 
     func toggleBarredBar() {
-        guard !isTransitioning else { return }
-
         isBarredBarVisible.toggle()
+        print("[Barred] toggleBarredBar → isBarredBarVisible=\(isBarredBarVisible)")
 
         if isBarredBarVisible {
             showSection()
@@ -55,15 +59,11 @@ final class MenuBarController {
     // MARK: - Private
 
     private func hideSection() {
-        isTransitioning = true
         sectionDivider.expand()
-        isTransitioning = false
     }
 
     private func showSection() {
-        isTransitioning = true
         sectionDivider.collapse()
-        isTransitioning = false
     }
 
     private func scheduleAutoHide() {

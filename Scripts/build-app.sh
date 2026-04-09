@@ -43,8 +43,12 @@ if [ -d "$PROJECT_DIR/Resources/Assets.xcassets" ]; then
         --minimum-deployment-target 14.0 \
         --app-icon AppIcon \
         --output-partial-info-plist /tmp/barred-asset-info.plist
-elif [ -f "$PROJECT_DIR/Resources/AppIcon.icns" ]; then
-    cp "$PROJECT_DIR/Resources/AppIcon.icns" "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
+
+    # If actool didn't produce an .icns, fall back to the pre-built one
+    if [ ! -f "$APP_BUNDLE/Contents/Resources/AppIcon.icns" ] && [ -f "$PROJECT_DIR/Resources/AppIcon.icns" ]; then
+        echo "Falling back to pre-built AppIcon.icns..."
+        cp "$PROJECT_DIR/Resources/AppIcon.icns" "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
+    fi
 fi
 
 # Create PkgInfo
@@ -52,6 +56,12 @@ echo -n "APPL????" > "$APP_BUNDLE/Contents/PkgInfo"
 
 # Code signing — use CODESIGN_IDENTITY env var, or fall back to "Barred Dev" local cert, then ad-hoc
 SIGN_IDENTITY="${CODESIGN_IDENTITY:-${DEVELOPER_ID_APPLICATION:-}}"
+ENTITLEMENTS="$PROJECT_DIR/Resources/Barred.entitlements"
+KEYCHAIN_ARG=""
+
+if [ -n "${KEYCHAIN_PATH:-}" ]; then
+    KEYCHAIN_ARG="--keychain $KEYCHAIN_PATH"
+fi
 
 if [ -z "$SIGN_IDENTITY" ] && security find-identity -v -p codesigning | grep -q "Barred Dev"; then
     SIGN_IDENTITY="Barred Dev"
@@ -59,13 +69,29 @@ fi
 
 if [ -n "$SIGN_IDENTITY" ]; then
     echo "Signing app with: $SIGN_IDENTITY"
-    codesign --force --deep --sign "$SIGN_IDENTITY" "$APP_BUNDLE"
+    # Sign the main executable first, then the bundle (avoid deprecated --deep)
+    codesign --force --sign "$SIGN_IDENTITY" \
+        --entitlements "$ENTITLEMENTS" \
+        --options runtime \
+        --timestamp \
+        $KEYCHAIN_ARG \
+        "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
+
+    codesign --force --sign "$SIGN_IDENTITY" \
+        --entitlements "$ENTITLEMENTS" \
+        --options runtime \
+        --timestamp \
+        $KEYCHAIN_ARG \
+        "$APP_BUNDLE"
+
     echo "Verifying signature..."
-    codesign --verify --deep --strict "$APP_BUNDLE"
+    codesign --verify --strict "$APP_BUNDLE"
+    echo "Checking notarization requirements..."
+    spctl --assess --type execute --verbose "$APP_BUNDLE" || echo "  (spctl check may fail without notarization — this is expected pre-notarization)"
 else
     echo "Warning: No signing identity found. Using ad-hoc signing (permissions may reset on rebuild)."
     echo "  Create a local cert named 'Barred Dev' in Keychain Access to fix this."
-    codesign --force --deep --sign - "$APP_BUNDLE"
+    codesign --force --sign - "$APP_BUNDLE"
 fi
 
 # Create zip for distribution

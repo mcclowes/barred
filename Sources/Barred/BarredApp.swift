@@ -28,8 +28,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         popover.behavior = .transient
         popover.contentViewController = NSHostingController(rootView: BarredMenuView())
 
-        // Create the divider status item for the expand/collapse trick
-        controller.sectionDivider.setUp()
+        // Create divider and begin hide cycle — must happen after
+        // the main status item exists so divider sits to its left.
+        controller.start()
     }
 
     @objc private func statusItemClicked(_ sender: NSStatusBarButton) {
