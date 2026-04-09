@@ -42,7 +42,7 @@ struct BarredMenuView: View {
 
             Divider()
 
-            Button("Quit Barred", systemImage: "xmark.circle") {
+            Button("Quit Barred", systemImage: "power") {
                 controller.restoreAll()
                 NSApplication.shared.terminate(nil)
             }

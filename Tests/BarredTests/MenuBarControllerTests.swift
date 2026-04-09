@@ -54,63 +54,69 @@ private final class MockSectionDivider: SectionDividing {
 
 @MainActor
 struct MenuBarControllerTests {
+    private struct TestHarness {
+        let controller: MenuBarController
+        let divider: MockSectionDivider
+        let detector: MockDetector
+    }
+
     private func makeController(
         divider: MockSectionDivider = MockSectionDivider(),
         detector: MockDetector = MockDetector()
-    ) -> (MenuBarController, MockSectionDivider, MockDetector) {
+    ) -> TestHarness {
         let controller = MenuBarController(
             accessibilityService: MockAccessibilityService(),
             detector: detector,
             preferencesStore: PreferencesStore(),
             sectionDivider: divider
         )
-        return (controller, divider, detector)
+        return TestHarness(controller: controller, divider: divider, detector: detector)
     }
 
     @Test("initially hidden bar is not visible")
     func initialState() {
-        let (controller, _, _) = makeController()
-        #expect(controller.isBarredBarVisible == false)
+        let harness = makeController()
+        #expect(harness.controller.isBarredBarVisible == false)
     }
 
     @Test("toggleBarredBar flips visibility")
     func toggle() {
-        let (controller, _, _) = makeController()
-        controller.toggleBarredBar()
-        #expect(controller.isBarredBarVisible == true)
-        controller.toggleBarredBar()
-        #expect(controller.isBarredBarVisible == false)
+        let harness = makeController()
+        harness.controller.toggleBarredBar()
+        #expect(harness.controller.isBarredBarVisible == true)
+        harness.controller.toggleBarredBar()
+        #expect(harness.controller.isBarredBarVisible == false)
     }
 
     @Test("toggle expands divider when hiding, collapses when showing")
     func toggleDividerBehaviour() {
-        let (controller, divider, _) = makeController()
+        let harness = makeController()
 
-        controller.toggleBarredBar() // show
-        #expect(divider.collapseCallCount == 1)
+        harness.controller.toggleBarredBar() // show
+        #expect(harness.divider.collapseCallCount == 1)
 
-        controller.toggleBarredBar() // hide
-        #expect(divider.expandCallCount == 1)
+        harness.controller.toggleBarredBar() // hide
+        #expect(harness.divider.expandCallCount == 1)
     }
 
     @Test("start sets up the section divider")
     func startSetUp() {
-        let (controller, divider, _) = makeController()
-        controller.start()
-        #expect(divider.setUpCalled)
+        let harness = makeController()
+        harness.controller.start()
+        #expect(harness.divider.setUpCalled)
     }
 
     @Test("restoreAll stops scanning and collapses divider")
     func restoreAll() {
-        let (controller, divider, detector) = makeController()
-        controller.restoreAll()
-        #expect(detector.scanningStopped)
-        #expect(divider.collapseCallCount == 1)
+        let harness = makeController()
+        harness.controller.restoreAll()
+        #expect(harness.detector.scanningStopped)
+        #expect(harness.divider.collapseCallCount == 1)
     }
 
     @Test("detectedItems delegates to detector")
     func detectedItemsDelegation() {
-        let (controller, _, _) = makeController()
-        #expect(controller.detectedItems.isEmpty)
+        let harness = makeController()
+        #expect(harness.controller.detectedItems.isEmpty)
     }
 }
