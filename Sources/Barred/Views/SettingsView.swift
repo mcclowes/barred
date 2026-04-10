@@ -93,13 +93,18 @@ struct ItemsSettingsView: View {
 
 struct GeneralSettingsView: View {
     @Environment(MenuBarController.self) private var controller
+    @State private var isUpdatingLaunchAtLogin = false
+    @State private var launchAtLoginErrorMessage: String?
 
     var body: some View {
         @Bindable var controller = controller
 
         Form {
             Toggle("Launch at login", isOn: $controller.preferences.launchAtLogin)
-                .onChange(of: controller.preferences.launchAtLogin) { _, newValue in
+                .onChange(of: controller.preferences.launchAtLogin) { oldValue, newValue in
+                    guard !isUpdatingLaunchAtLogin else { return }
+                    isUpdatingLaunchAtLogin = true
+                    defer { isUpdatingLaunchAtLogin = false }
                     do {
                         if newValue {
                             try SMAppService.mainApp.register()
@@ -107,7 +112,8 @@ struct GeneralSettingsView: View {
                             try SMAppService.mainApp.unregister()
                         }
                     } catch {
-                        controller.preferences.launchAtLogin = !newValue
+                        launchAtLoginErrorMessage = error.localizedDescription
+                        controller.preferences.launchAtLogin = oldValue
                     }
                 }
 
@@ -126,6 +132,17 @@ struct GeneralSettingsView: View {
             }
         }
         .padding()
+        .alert(
+            "Couldn't update Login Items",
+            isPresented: Binding(
+                get: { launchAtLoginErrorMessage != nil },
+                set: { if !$0 { launchAtLoginErrorMessage = nil } }
+            )
+        ) {
+            Button("OK") { launchAtLoginErrorMessage = nil }
+        } message: {
+            Text(launchAtLoginErrorMessage ?? "")
+        }
     }
 }
 

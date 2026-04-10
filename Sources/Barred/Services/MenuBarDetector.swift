@@ -20,7 +20,8 @@ final class MenuBarDetector: MenuBarDetecting {
     private(set) var detectedItems: [MenuBarItem] = []
     private(set) var hasCompletedFirstScan = false
     private var scanTask: Task<Void, Never>?
-    private var firstScanContinuation: CheckedContinuation<Void, Never>?
+    private var firstScanWaiters: [CheckedContinuation<Void, Never>] = []
+    private var scanInFlight = false
 
     init(accessibilityService: AccessibilityQuerying) {
         self.accessibilityService = accessibilityService
@@ -29,11 +30,16 @@ final class MenuBarDetector: MenuBarDetecting {
     func waitForFirstScan() async {
         if hasCompletedFirstScan { return }
         await withCheckedContinuation { continuation in
-            firstScanContinuation = continuation
+            if hasCompletedFirstScan {
+                continuation.resume()
+            } else {
+                firstScanWaiters.append(continuation)
+            }
         }
     }
 
     func startScanning() {
+        guard scanTask == nil else { return }
         scanTask = Task {
             await scan()
             while !Task.isCancelled {
@@ -53,6 +59,10 @@ final class MenuBarDetector: MenuBarDetecting {
     }
 
     func scan() async {
+        guard !scanInFlight else { return }
+        scanInFlight = true
+        defer { scanInFlight = false }
+
         accessibilityService.checkTrust()
 
         let windows = await fetchStatusItemWindows()
@@ -79,8 +89,11 @@ final class MenuBarDetector: MenuBarDetecting {
 
         if !hasCompletedFirstScan {
             hasCompletedFirstScan = true
-            firstScanContinuation?.resume()
-            firstScanContinuation = nil
+            let waiters = firstScanWaiters
+            firstScanWaiters.removeAll()
+            for waiter in waiters {
+                waiter.resume()
+            }
         }
     }
 

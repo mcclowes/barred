@@ -41,8 +41,15 @@ struct MenuBarItem: Identifiable {
         self.appIcon = Self.loadIcon(for: bundleIdentifier)
     }
 
+    /// An item is considered hidden when its origin doesn't lie inside any
+    /// connected screen — the divider "hides" items by pushing them off the
+    /// union of all screen frames, not by forcing negative x. Using `< 0`
+    /// gave false positives on multi-monitor layouts where the primary
+    /// display isn't at x = 0.
     var isHidden: Bool {
-        frame.origin.x < 0
+        let screens = NSScreen.screens
+        guard !screens.isEmpty else { return frame.origin.x < 0 }
+        return !screens.contains { $0.frame.contains(frame.origin) }
     }
 
     var displayName: String {

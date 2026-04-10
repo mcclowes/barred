@@ -19,18 +19,26 @@ final class SectionDivider: SectionDividing {
     private var statusItem: NSStatusItem?
     private var isExpanded = false
     private var actionTarget: ActionTarget?
+    // `nonisolated(unsafe)` because `deinit` is nonisolated in Swift 6 and
+    // `NotificationCenter.removeObserver` is thread-safe for valid tokens.
+    // The property is only *written* on the main actor, so there's no
+    // race on the storage itself.
+    // swiftlint:disable:next modifier_order
+    private nonisolated(unsafe) var screenChangeObserver: NSObjectProtocol?
 
     /// The collapsed length — a small dot visible as a section separator.
     private static let collapsedLength: Double = 20
 
     /// Compute a safe expanded length that pushes items off-screen without
     /// causing the multi-GB memory leaks seen with excessively large values.
+    /// Uses the widest connected screen rather than `NSScreen.main`, which
+    /// tracks the key-window screen and may be narrower than the display
+    /// that actually hosts the menu bar.
     private var expandedLength: Double {
-        guard let screen = NSScreen.main else { return 2000 }
-        let screenWidth = screen.frame.width
-        // Use 2x screen width to handle ultrawide/5K displays, capped to
-        // avoid the memory leak that occurs with extremely large values.
-        return min(screenWidth * 2, 20000)
+        let widest = NSScreen.screens.map(\.frame.width).max() ?? 1000
+        // 2x screen width handles ultrawide/5K displays; capped to avoid
+        // the multi-GB memory leak seen with excessively large lengths.
+        return min(widest * 2, 20000)
     }
 
     /// Create the divider status item. Must be called AFTER the main Barred
@@ -55,6 +63,31 @@ final class SectionDivider: SectionDividing {
         }
 
         statusItem = item
+
+        screenChangeObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            // NotificationCenter delivers on the main queue, and this class
+            // is @MainActor-isolated, so we can hop without further checks.
+            MainActor.assumeIsolated {
+                self?.handleScreenChange()
+            }
+        }
+    }
+
+    deinit {
+        if let screenChangeObserver {
+            NotificationCenter.default.removeObserver(screenChangeObserver)
+        }
+    }
+
+    private func handleScreenChange() {
+        guard isExpanded, let statusItem else { return }
+        let length = expandedLength
+        Self.logger.debug("Screen change — re-applying divider length to \(length)px")
+        statusItem.length = length
     }
 
     /// Expand the divider to push items to its left off-screen.

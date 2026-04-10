@@ -1,3 +1,4 @@
+import AppKit
 @testable import Barred
 import Darwin
 import Testing
@@ -8,6 +9,7 @@ struct MenuBarItemTests {
         appName: String = "TestApp",
         bundleIdentifier: String? = "com.test.app",
         title: String? = "Test",
+        frame: CGRect = .zero,
         itemIndex: Int = 0
     ) -> MenuBarItem {
         MenuBarItem(
@@ -16,7 +18,7 @@ struct MenuBarItemTests {
             bundleIdentifier: bundleIdentifier,
             title: title,
             windowID: 1,
-            frame: .zero,
+            frame: frame,
             itemIndex: itemIndex,
             axElement: nil
         )
@@ -82,5 +84,29 @@ struct MenuBarItemTests {
         let a = makeItem(bundleIdentifier: "com.test", title: "X")
         let b = makeItem(bundleIdentifier: "com.test", title: "Y")
         #expect(a != b)
+    }
+
+    @Test("isHidden reports true for items pushed far off-screen")
+    func isHiddenOffscreen() {
+        let offscreen = CGRect(x: -50000, y: 0, width: 20, height: 24)
+        let item = makeItem(frame: offscreen)
+        #expect(item.isHidden == true)
+    }
+
+    @Test("isHidden is false for items inside a connected screen frame")
+    func isHiddenOnScreen() {
+        guard let main = NSScreen.screens.first else {
+            // Headless environment — falls back to `< 0` check, which `.zero`
+            // does not satisfy, so `.zero` should still be considered visible.
+            let item = makeItem(frame: .zero)
+            #expect(item.isHidden == false)
+            return
+        }
+        let onScreen = CGRect(
+            origin: CGPoint(x: main.frame.midX, y: main.frame.midY),
+            size: CGSize(width: 20, height: 24)
+        )
+        let item = makeItem(frame: onScreen)
+        #expect(item.isHidden == false)
     }
 }

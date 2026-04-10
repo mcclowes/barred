@@ -31,12 +31,13 @@ final class MenuBarController {
         self.preferencesStore = preferencesStore
         self.sectionDivider = sectionDivider
         self.detector = detector ?? MenuBarDetector(accessibilityService: accessibilityService)
-        self.detector.startScanning()
     }
 
     /// Call after the main Barred status item has been created, so the
     /// divider appears to its left in the menu bar.
     func start() {
+        detector.startScanning()
+
         sectionDivider.setUp { [weak self] in
             self?.toggleBarredBar()
         }

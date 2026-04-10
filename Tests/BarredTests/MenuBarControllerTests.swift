@@ -99,11 +99,19 @@ struct MenuBarControllerTests {
         #expect(harness.divider.expandCallCount == 1)
     }
 
-    @Test("start sets up the section divider")
+    @Test("start sets up the section divider and begins scanning")
     func startSetUp() {
         let harness = makeController()
+        #expect(harness.detector.scanningStarted == false)
         harness.controller.start()
         #expect(harness.divider.setUpCalled)
+        #expect(harness.detector.scanningStarted == true)
+    }
+
+    @Test("init does not start scanning")
+    func initDoesNotScan() {
+        let harness = makeController()
+        #expect(harness.detector.scanningStarted == false)
     }
 
     @Test("restoreAll stops scanning and collapses divider")

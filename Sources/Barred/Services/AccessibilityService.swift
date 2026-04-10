@@ -13,6 +13,12 @@ protocol AccessibilityQuerying: AnyObject {
 @MainActor @Observable
 final class AccessibilityService: AccessibilityQuerying {
     private static let logger = Logger(subsystem: "com.mcclowes.barred", category: "AccessibilityService")
+
+    /// Per-element AX IPC timeout. A single unresponsive target process must never
+    /// freeze the main actor — 0.5s is high enough for healthy apps and low enough
+    /// that a full scan remains under a few seconds in the worst case.
+    private static let axMessagingTimeout: Float = 0.5
+
     private(set) var isTrusted = false
     init() {
         checkTrust()
@@ -44,6 +50,7 @@ final class AccessibilityService: AccessibilityQuerying {
 
         for app in apps {
             let axApp = AXUIElementCreateApplication(app.processIdentifier)
+            AXUIElementSetMessagingTimeout(axApp, Self.axMessagingTimeout)
 
             guard let extrasMenuBar: AXUIElement = axApp.attribute("AXExtrasMenuBar") else {
                 continue
