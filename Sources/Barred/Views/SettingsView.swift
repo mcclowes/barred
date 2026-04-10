@@ -29,11 +29,15 @@ struct ItemsSettingsView: View {
     @Environment(MenuBarController.self) private var controller
 
     private var visibleItems: [MenuBarItem] {
-        controller.detectedItems.filter { !$0.isHidden }
+        controller.detectedItems
+            .filter { !$0.isHidden }
+            .sorted { $0.frame.origin.x < $1.frame.origin.x }
     }
 
     private var hiddenItems: [MenuBarItem] {
-        controller.detectedItems.filter(\.isHidden)
+        controller.detectedItems
+            .filter(\.isHidden)
+            .sorted { $0.frame.origin.x < $1.frame.origin.x }
     }
 
     private var appsWithMultipleItems: Set<String> {
@@ -47,7 +51,10 @@ struct ItemsSettingsView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading) {
+        let visible = visibleItems
+        let hidden = hiddenItems
+
+        return VStack(alignment: .leading) {
             if !controller.accessibilityService.isTrusted {
                 OnboardingView()
             } else if controller.detectedItems.isEmpty {
@@ -59,7 +66,7 @@ struct ItemsSettingsView: View {
             } else {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(
-                        "\u{2318}-drag menu bar icons to rearrange them. Items to the left of the Barred divider (|) will be hidden."
+                        "Drag items in this list to rearrange them, or \u{2318}-drag icons directly in the menu bar. Items to the left of the Barred divider (|) will be hidden."
                     )
                     .font(.callout)
                     .foregroundStyle(.secondary)
@@ -67,16 +74,25 @@ struct ItemsSettingsView: View {
 
                     List {
                         Section {
-                            ForEach(visibleItems) { item in
+                            ForEach(visible) { item in
                                 MenuBarItemRow(item: item, showIndex: shouldShowIndex(for: item))
+                            }
+                            .onMove { source, destination in
+                                Task { @MainActor in
+                                    await controller.moveItem(
+                                        from: source,
+                                        to: destination,
+                                        in: visible
+                                    )
+                                }
                             }
                         } header: {
                             Label("Visible", systemImage: "eye")
                         }
 
-                        if !hiddenItems.isEmpty {
+                        if !hidden.isEmpty {
                             Section {
-                                ForEach(hiddenItems) { item in
+                                ForEach(hidden) { item in
                                     MenuBarItemRow(item: item, showIndex: shouldShowIndex(for: item))
                                 }
                             } header: {
@@ -84,6 +100,7 @@ struct ItemsSettingsView: View {
                             }
                         }
                     }
+                    .disabled(controller.isMovingItem)
                 }
             }
         }
