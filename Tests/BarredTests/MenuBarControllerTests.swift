@@ -1,4 +1,6 @@
+import AppKit
 @testable import Barred
+import Foundation
 import Testing
 
 @MainActor
@@ -53,24 +55,57 @@ private final class MockSectionDivider: SectionDividing {
 }
 
 @MainActor
+private final class MockItemMover: MenuBarItemMoving {
+    var performDragCallCount = 0
+    var lastSource: CGPoint?
+    var lastDestination: CGPoint?
+
+    func performDrag(from source: CGPoint, to destination: CGPoint) async {
+        performDragCallCount += 1
+        lastSource = source
+        lastDestination = destination
+    }
+}
+
+@MainActor
 struct MenuBarControllerTests {
     private struct TestHarness {
         let controller: MenuBarController
         let divider: MockSectionDivider
         let detector: MockDetector
+        let mover: MockItemMover
     }
 
     private func makeController(
         divider: MockSectionDivider = MockSectionDivider(),
-        detector: MockDetector = MockDetector()
+        detector: MockDetector = MockDetector(),
+        mover: MockItemMover = MockItemMover()
     ) -> TestHarness {
         let controller = MenuBarController(
             accessibilityService: MockAccessibilityService(),
             detector: detector,
             preferencesStore: PreferencesStore(),
-            sectionDivider: divider
+            sectionDivider: divider,
+            itemMover: mover
         )
-        return TestHarness(controller: controller, divider: divider, detector: detector)
+        return TestHarness(controller: controller, divider: divider, detector: detector, mover: mover)
+    }
+
+    private func makeItem(
+        id: String,
+        x: Double,
+        width: Double = 24
+    ) -> MenuBarItem {
+        MenuBarItem(
+            pid: 1,
+            appName: id,
+            bundleIdentifier: "com.test.\(id)",
+            title: id,
+            windowID: 0,
+            frame: CGRect(x: x, y: 0, width: width, height: 24),
+            itemIndex: 0,
+            axElement: nil
+        )
     }
 
     @Test("initially hidden bar is not visible")
@@ -126,5 +161,111 @@ struct MenuBarControllerTests {
     func detectedItemsDelegation() {
         let harness = makeController()
         #expect(harness.controller.detectedItems.isEmpty)
+    }
+
+    // MARK: - moveItem
+
+    @Test("moveItem forward drops just before destination slot")
+    func moveItemForward() async {
+        let harness = makeController()
+        let items = [
+            makeItem(id: "A", x: 100),
+            makeItem(id: "B", x: 140),
+            makeItem(id: "C", x: 180),
+            makeItem(id: "D", x: 220),
+            makeItem(id: "E", x: 260),
+        ]
+        // Move A (index 0) to slot 4 → A should land between D and E.
+        await harness.controller.moveItem(from: IndexSet(integer: 0), to: 4, in: items)
+
+        #expect(harness.mover.performDragCallCount == 1)
+        // Source center of A is (112, 12).
+        #expect(harness.mover.lastSource == CGPoint(x: 112, y: 12))
+        // Destination x = E.minX - halfWidth(12) - gap(4) = 260 - 16 = 244.
+        #expect(harness.mover.lastDestination?.x == 244)
+    }
+
+    @Test("moveItem backward drops before destination slot")
+    func moveItemBackward() async {
+        let harness = makeController()
+        let items = [
+            makeItem(id: "A", x: 100),
+            makeItem(id: "B", x: 140),
+            makeItem(id: "C", x: 180),
+            makeItem(id: "D", x: 220),
+            makeItem(id: "E", x: 260),
+        ]
+        // Move D (index 3) to slot 1 → D should land between A and B.
+        await harness.controller.moveItem(from: IndexSet(integer: 3), to: 1, in: items)
+
+        #expect(harness.mover.performDragCallCount == 1)
+        // Destination x = B.minX - halfWidth(12) - gap(4) = 140 - 16 = 124.
+        #expect(harness.mover.lastDestination?.x == 124)
+    }
+
+    @Test("moveItem to the end drops past rightmost item")
+    func moveItemToEnd() async {
+        let harness = makeController()
+        let items = [
+            makeItem(id: "A", x: 100),
+            makeItem(id: "B", x: 140),
+            makeItem(id: "C", x: 180),
+        ]
+        // Move A (index 0) to end (slot 3) → past C.
+        await harness.controller.moveItem(from: IndexSet(integer: 0), to: 3, in: items)
+
+        #expect(harness.mover.performDragCallCount == 1)
+        // C.maxX = 204, + halfWidth(12) + gap(4) = 220.
+        #expect(harness.mover.lastDestination?.x == 220)
+    }
+
+    @Test("moveItem to the start drops before leftmost item")
+    func moveItemToStart() async {
+        let harness = makeController()
+        let items = [
+            makeItem(id: "A", x: 100),
+            makeItem(id: "B", x: 140),
+            makeItem(id: "C", x: 180),
+        ]
+        // Move C (index 2) to slot 0 → before A.
+        await harness.controller.moveItem(from: IndexSet(integer: 2), to: 0, in: items)
+
+        #expect(harness.mover.performDragCallCount == 1)
+        // A.minX = 100, - halfWidth(12) - gap(4) = 84.
+        #expect(harness.mover.lastDestination?.x == 84)
+    }
+
+    @Test("moveItem no-ops for same slot")
+    func moveItemSameSlot() async {
+        let harness = makeController()
+        let items = [
+            makeItem(id: "A", x: 100),
+            makeItem(id: "B", x: 140),
+        ]
+        // Destination == source is a no-op.
+        await harness.controller.moveItem(from: IndexSet(integer: 0), to: 0, in: items)
+        // Destination == source + 1 is also a no-op (would insert before the next
+        // item, leaving the order unchanged).
+        await harness.controller.moveItem(from: IndexSet(integer: 0), to: 1, in: items)
+
+        #expect(harness.mover.performDragCallCount == 0)
+    }
+
+    @Test("moveItem skips items with zero-sized frames")
+    func moveItemZeroFrame() async {
+        let harness = makeController()
+        let zeroed = MenuBarItem(
+            pid: 1,
+            appName: "Z",
+            bundleIdentifier: "com.test.z",
+            title: "Z",
+            windowID: 0,
+            frame: .zero,
+            itemIndex: 0,
+            axElement: nil
+        )
+        let items = [zeroed, makeItem(id: "B", x: 140)]
+        await harness.controller.moveItem(from: IndexSet(integer: 0), to: 2, in: items)
+        #expect(harness.mover.performDragCallCount == 0)
     }
 }
