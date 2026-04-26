@@ -10,9 +10,11 @@ final class MenuBarController {
     let preferencesStore: PreferencesStoring
     let sectionDivider: SectionDividing
     let itemMover: MenuBarItemMoving
+    let cursorMonitor: CursorMonitoring
     private(set) var isBarredBarVisible = false
     private(set) var isMovingItem = false
     private var autoHideTask: Task<Void, Never>?
+    private let idleTickInterval: Duration
 
     var detectedItems: [MenuBarItem] {
         detector.detectedItems
@@ -28,12 +30,16 @@ final class MenuBarController {
         detector: MenuBarDetecting? = nil,
         preferencesStore: PreferencesStoring = PreferencesStore(),
         sectionDivider: SectionDividing = SectionDivider(),
-        itemMover: MenuBarItemMoving = MenuBarItemMover()
+        itemMover: MenuBarItemMoving = MenuBarItemMover(),
+        cursorMonitor: CursorMonitoring = CursorMonitor(),
+        idleTickInterval: Duration = .milliseconds(200)
     ) {
         self.accessibilityService = accessibilityService
         self.preferencesStore = preferencesStore
         self.sectionDivider = sectionDivider
         self.itemMover = itemMover
+        self.cursorMonitor = cursorMonitor
+        self.idleTickInterval = idleTickInterval
         self.detector = detector ?? MenuBarDetector(accessibilityService: accessibilityService)
     }
 
@@ -155,15 +161,34 @@ final class MenuBarController {
     private func scheduleAutoHide() {
         cancelAutoHide()
         let delay = preferences.autoHideDelay
-        autoHideTask = Task {
+        let tick = idleTickInterval
+        autoHideTask = Task { [weak self] in
+            await self?.runIdleCountdown(delay: delay, tick: tick)
+            guard let self, !Task.isCancelled, isBarredBarVisible else { return }
+            isBarredBarVisible = false
+            hideSection()
+        }
+    }
+
+    /// Polls the cursor and `isMovingItem` on each tick. The "idle" clock
+    /// resets while the user is hovering the revealed items or dragging one,
+    /// so the bar only auto-hides after `delay` seconds of true inactivity.
+    private func runIdleCountdown(delay: TimeInterval, tick: Duration) async {
+        let clock = ContinuousClock()
+        var idleStart = clock.now
+        let deadline: Duration = .seconds(delay)
+        while !Task.isCancelled {
             do {
-                try await Task.sleep(for: .seconds(delay))
+                try await Task.sleep(for: tick)
             } catch {
                 return
             }
             guard isBarredBarVisible else { return }
-            isBarredBarVisible = false
-            hideSection()
+            if isMovingItem || cursorMonitor.isOverMenuBarItems(detectedItems) {
+                idleStart = clock.now
+                continue
+            }
+            if clock.now - idleStart >= deadline { return }
         }
     }
 
