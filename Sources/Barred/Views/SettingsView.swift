@@ -66,7 +66,8 @@ struct ItemsSettingsView: View {
             } else {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(
-                        "Drag items in this list to rearrange them, or \u{2318}-drag icons directly in the menu bar. Items to the left of the Barred divider (|) will be hidden."
+                        "Drag items in this list to rearrange them, or \u{2318}-drag icons directly in the menu bar. " +
+                            "Items to the left of the Barred divider (|) will be hidden."
                     )
                     .font(.callout)
                     .foregroundStyle(.secondary)
