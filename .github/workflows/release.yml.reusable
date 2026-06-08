@@ -1,0 +1,26 @@
+# Drop-in replacement for release.yml once mcclowes/macos-release-workflows
+# is pushed to GitHub. Rename this file to release.yml to activate.
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    uses: mcclowes/macos-release-workflows/.github/workflows/macos-release.yml@main
+    with:
+      app_name: Barred
+      app_slug: barred
+      bundle_id: com.mcclowes.barred
+      app_description: Native macOS menu bar manager
+      min_macos: sonoma
+      include_app_support_in_zap: true
+    secrets:
+      DEVELOPER_ID_CERTIFICATE_BASE64: ${{ secrets.DEVELOPER_ID_CERTIFICATE_BASE64 }}
+      DEVELOPER_ID_CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_CERTIFICATE_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}

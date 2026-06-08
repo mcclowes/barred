@@ -27,9 +27,9 @@
     <key>NSAccessibilityUsageDescription</key>
     <string>Barred needs accessibility access to detect and manage menu bar items from other apps.</string>
     <key>CFBundleIconFile</key>
-    <string>AppIcon</string>
+    <string>barred</string>
     <key>CFBundleIconName</key>
-    <string>AppIcon</string>
+    <string>barred</string>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
     <key>NSHumanReadableCopyright</key>
