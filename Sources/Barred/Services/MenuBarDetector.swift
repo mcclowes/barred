@@ -1,7 +1,7 @@
 import AppKit
 import ApplicationServices
 import os
-import ScreenCaptureKit
+@preconcurrency import ScreenCaptureKit
 
 @MainActor
 protocol MenuBarDetecting: AnyObject {
