@@ -68,27 +68,52 @@ private final class MockItemMover: MenuBarItemMoving {
 }
 
 @MainActor
+private final class MockCursorMonitor: CursorMonitoring {
+    var isOver = false
+
+    func isOverMenuBarItems(_: [MenuBarItem]) -> Bool {
+        isOver
+    }
+}
+
+@MainActor
 struct MenuBarControllerTests {
     private struct TestHarness {
         let controller: MenuBarController
         let divider: MockSectionDivider
         let detector: MockDetector
         let mover: MockItemMover
+        let cursorMonitor: MockCursorMonitor
     }
 
     private func makeController(
         divider: MockSectionDivider = MockSectionDivider(),
         detector: MockDetector = MockDetector(),
-        mover: MockItemMover = MockItemMover()
+        mover: MockItemMover = MockItemMover(),
+        cursorMonitor: MockCursorMonitor = MockCursorMonitor(),
+        autoHideDelay: TimeInterval? = nil,
+        idleTickInterval: Duration = .milliseconds(200)
     ) -> TestHarness {
+        let prefsStore = PreferencesStore()
+        if let autoHideDelay {
+            prefsStore.preferences.autoHideDelay = autoHideDelay
+        }
         let controller = MenuBarController(
             accessibilityService: MockAccessibilityService(),
             detector: detector,
-            preferencesStore: PreferencesStore(),
+            preferencesStore: prefsStore,
             sectionDivider: divider,
-            itemMover: mover
+            itemMover: mover,
+            cursorMonitor: cursorMonitor,
+            idleTickInterval: idleTickInterval
         )
-        return TestHarness(controller: controller, divider: divider, detector: detector, mover: mover)
+        return TestHarness(
+            controller: controller,
+            divider: divider,
+            detector: detector,
+            mover: mover,
+            cursorMonitor: cursorMonitor
+        )
     }
 
     private func makeItem(
@@ -249,6 +274,73 @@ struct MenuBarControllerTests {
         await harness.controller.moveItem(from: IndexSet(integer: 0), to: 1, in: items)
 
         #expect(harness.mover.performDragCallCount == 0)
+    }
+
+    // MARK: - auto-hide
+
+    @Test("auto-hide fires after delay when cursor is idle")
+    func autoHideFiresWhenIdle() async throws {
+        let harness = makeController(
+            autoHideDelay: 0.1,
+            idleTickInterval: .milliseconds(20)
+        )
+        harness.cursorMonitor.isOver = false
+        harness.controller.toggleBarredBar()
+        #expect(harness.controller.isBarredBarVisible == true)
+
+        try await Task.sleep(for: .milliseconds(400))
+
+        #expect(harness.controller.isBarredBarVisible == false)
+        #expect(harness.divider.expandCallCount == 1)
+    }
+
+    @Test("auto-hide is suppressed while cursor is over revealed items")
+    func autoHideSuppressedWhileHovering() async throws {
+        let harness = makeController(
+            autoHideDelay: 0.1,
+            idleTickInterval: .milliseconds(20)
+        )
+        harness.cursorMonitor.isOver = true
+        harness.controller.toggleBarredBar()
+        #expect(harness.controller.isBarredBarVisible == true)
+
+        try await Task.sleep(for: .milliseconds(400))
+
+        #expect(harness.controller.isBarredBarVisible == true)
+        #expect(harness.divider.expandCallCount == 0)
+    }
+
+    @Test("auto-hide resumes once cursor leaves the active region")
+    func autoHideResumesAfterCursorLeaves() async throws {
+        let harness = makeController(
+            autoHideDelay: 0.1,
+            idleTickInterval: .milliseconds(20)
+        )
+        harness.cursorMonitor.isOver = true
+        harness.controller.toggleBarredBar()
+
+        try await Task.sleep(for: .milliseconds(250))
+        #expect(harness.controller.isBarredBarVisible == true)
+
+        harness.cursorMonitor.isOver = false
+        try await Task.sleep(for: .milliseconds(400))
+        #expect(harness.controller.isBarredBarVisible == false)
+    }
+
+    @Test("toggling off cancels the pending auto-hide")
+    func togglingOffCancelsAutoHide() async throws {
+        let harness = makeController(
+            autoHideDelay: 0.1,
+            idleTickInterval: .milliseconds(20)
+        )
+        harness.controller.toggleBarredBar() // show
+        harness.controller.toggleBarredBar() // hide immediately
+
+        try await Task.sleep(for: .milliseconds(300))
+
+        // Only one expand call (from the manual toggle off), not from auto-hide.
+        #expect(harness.divider.expandCallCount == 1)
+        #expect(harness.controller.isBarredBarVisible == false)
     }
 
     @Test("moveItem skips items with zero-sized frames")
