@@ -43,21 +43,15 @@ cp "$PROJECT_DIR/Resources/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${BUILD_NUMBER:-1}" "$APP_BUNDLE/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :LSMinimumSystemVersion 14.0" "$APP_BUNDLE/Contents/Info.plist"
 
-# Compile asset catalog (generates AppIcon.icns from Assets.xcassets)
-if [ -d "$PROJECT_DIR/Resources/Assets.xcassets" ]; then
-    echo "Compiling asset catalog..."
-    xcrun actool "$PROJECT_DIR/Resources/Assets.xcassets" \
+# Compile the app icon from the Icon Composer file (generates barred.icns + Assets.car)
+if [ -d "$PROJECT_DIR/barred.icon" ]; then
+    echo "Compiling app icon..."
+    xcrun actool "$PROJECT_DIR/barred.icon" \
         --compile "$APP_BUNDLE/Contents/Resources" \
         --platform macosx \
         --minimum-deployment-target 14.0 \
-        --app-icon AppIcon \
+        --app-icon barred \
         --output-partial-info-plist /tmp/barred-asset-info.plist
-
-    # If actool didn't produce an .icns, fall back to the pre-built one
-    if [ ! -f "$APP_BUNDLE/Contents/Resources/AppIcon.icns" ] && [ -f "$PROJECT_DIR/Resources/AppIcon.icns" ]; then
-        echo "Falling back to pre-built AppIcon.icns..."
-        cp "$PROJECT_DIR/Resources/AppIcon.icns" "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
-    fi
 fi
 
 # Create PkgInfo
