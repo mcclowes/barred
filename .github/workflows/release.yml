@@ -118,13 +118,14 @@ jobs:
 
       - name: Update Homebrew tap
         env:
-          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
+          VERSION="${GITHUB_REF_NAME#v}"
           CASK_CONTENT=$(cat <<CASKEOF
           cask "barred" do
-            version "${{ github.ref_name }}"
+            version "${VERSION}"
             sha256 "${{ steps.artifact.outputs.sha256 }}"
-            url "https://github.com/mcclowes/barred/releases/download/${{ github.ref_name }}/Barred.zip"
+            url "https://github.com/mcclowes/barred/releases/download/v#{version}/Barred.zip"
             name "Barred"
             desc "Native macOS menu bar manager"
             homepage "https://github.com/mcclowes/barred"
