@@ -69,10 +69,15 @@ private final class MockItemMover: MenuBarItemMoving {
 
 @MainActor
 private final class MockCursorMonitor: CursorMonitoring {
-    var isOver = false
+    var inStrip = false
+    var overPopup = false
 
-    func isOverMenuBarItems(_: [MenuBarItem]) -> Bool {
-        isOver
+    func isInMenuBarStrip() -> Bool {
+        inStrip
+    }
+
+    func isOverMenuBarPopup() -> Bool {
+        overPopup
     }
 }
 
@@ -284,7 +289,7 @@ struct MenuBarControllerTests {
             autoHideDelay: 0.1,
             idleTickInterval: .milliseconds(20)
         )
-        harness.cursorMonitor.isOver = false
+        harness.cursorMonitor.inStrip = false
         harness.controller.toggleBarredBar()
         #expect(harness.controller.isBarredBarVisible == true)
 
@@ -294,13 +299,32 @@ struct MenuBarControllerTests {
         #expect(harness.divider.expandCallCount == 1)
     }
 
-    @Test("auto-hide is suppressed while cursor is over revealed items")
-    func autoHideSuppressedWhileHovering() async throws {
+    @Test("auto-hide is suppressed while cursor is in the menu bar strip")
+    func autoHideSuppressedWhileInStrip() async throws {
         let harness = makeController(
             autoHideDelay: 0.1,
             idleTickInterval: .milliseconds(20)
         )
-        harness.cursorMonitor.isOver = true
+        harness.cursorMonitor.inStrip = true
+        harness.controller.toggleBarredBar()
+        #expect(harness.controller.isBarredBarVisible == true)
+
+        try await Task.sleep(for: .milliseconds(400))
+
+        #expect(harness.controller.isBarredBarVisible == true)
+        #expect(harness.divider.expandCallCount == 0)
+    }
+
+    @Test("auto-hide is suppressed while cursor is over an open menu-bar popup")
+    func autoHideSuppressedWhileOverPopup() async throws {
+        let harness = makeController(
+            autoHideDelay: 0.1,
+            idleTickInterval: .milliseconds(20)
+        )
+        // Cursor has left the strip (dropped down into the open dropdown) but is
+        // over the popup window — the section must stay revealed.
+        harness.cursorMonitor.inStrip = false
+        harness.cursorMonitor.overPopup = true
         harness.controller.toggleBarredBar()
         #expect(harness.controller.isBarredBarVisible == true)
 
@@ -316,13 +340,13 @@ struct MenuBarControllerTests {
             autoHideDelay: 0.1,
             idleTickInterval: .milliseconds(20)
         )
-        harness.cursorMonitor.isOver = true
+        harness.cursorMonitor.inStrip = true
         harness.controller.toggleBarredBar()
 
         try await Task.sleep(for: .milliseconds(250))
         #expect(harness.controller.isBarredBarVisible == true)
 
-        harness.cursorMonitor.isOver = false
+        harness.cursorMonitor.inStrip = false
         try await Task.sleep(for: .milliseconds(400))
         #expect(harness.controller.isBarredBarVisible == false)
     }
