@@ -170,9 +170,10 @@ final class MenuBarController {
         }
     }
 
-    /// Polls the cursor and `isMovingItem` on each tick. The "idle" clock
-    /// resets while the user is hovering the revealed items or dragging one,
-    /// so the bar only auto-hides after `delay` seconds of true inactivity.
+    /// Polls the cursor and `isMovingItem` on each tick. The "idle" clock resets
+    /// while the user is dragging an item, has the cursor anywhere in the menu
+    /// bar strip, or is interacting with an open menu-bar dropdown — so the bar
+    /// only auto-hides after `delay` seconds of true inactivity.
     private func runIdleCountdown(delay: TimeInterval, tick: Duration) async {
         let clock = ContinuousClock()
         var idleStart = clock.now
@@ -184,7 +185,10 @@ final class MenuBarController {
                 return
             }
             guard isBarredBarVisible else { return }
-            if isMovingItem || cursorMonitor.isOverMenuBarItems(detectedItems) {
+            if isMovingItem
+                || cursorMonitor.isInMenuBarStrip()
+                || cursorMonitor.isOverMenuBarPopup()
+            {
                 idleStart = clock.now
                 continue
             }
