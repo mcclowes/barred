@@ -28,7 +28,9 @@ final class MenuBarDetector: MenuBarDetecting {
     }
 
     func waitForFirstScan() async {
-        if hasCompletedFirstScan { return }
+        if hasCompletedFirstScan {
+            return
+        }
         await withCheckedContinuation { continuation in
             if hasCompletedFirstScan {
                 continuation.resume()
@@ -225,13 +227,17 @@ final class MenuBarDetector: MenuBarDetecting {
         let primaryFirst = items.sorted { a, b in
             let aOnPrimary = primaryFrame.contains(CGPoint(x: a.frame.midX, y: a.frame.midY))
             let bOnPrimary = primaryFrame.contains(CGPoint(x: b.frame.midX, y: b.frame.midY))
-            if aOnPrimary != bOnPrimary { return aOnPrimary }
+            if aOnPrimary != bOnPrimary {
+                return aOnPrimary
+            }
             return a.frame.origin.x < b.frame.origin.x
         }
 
         for item in primaryFirst {
             let key = item.persistenceKey
-            if seen.contains(key) { continue }
+            if seen.contains(key) {
+                continue
+            }
             seen.insert(key)
             result.append(item)
         }

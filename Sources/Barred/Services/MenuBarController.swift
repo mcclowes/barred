@@ -192,7 +192,9 @@ final class MenuBarController {
                 idleStart = clock.now
                 continue
             }
-            if clock.now - idleStart >= deadline { return }
+            if clock.now - idleStart >= deadline {
+                return
+            }
         }
     }
 
