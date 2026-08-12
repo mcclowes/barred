@@ -5,6 +5,7 @@ import SwiftUI
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private static let logger = Logger(subsystem: "com.mcclowes.barred", category: "AppDelegate")
+    nonisolated static let hasPresentedOnboardingKey = "com.mcclowes.barred.hasPresentedOnboarding"
     let controller: MenuBarController
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
@@ -37,6 +38,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
 
         controller.start()
+
+        if Self.shouldPresentOnboarding() {
+            DispatchQueue.main.async {
+                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                NSApp.activate(ignoringOtherApps: true)
+            }
+        }
     }
 
     @objc private func statusItemClicked(_ sender: NSStatusBarButton) {
@@ -70,6 +78,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_: Notification) {
         controller.restoreAll()
+    }
+
+    nonisolated static func shouldPresentOnboarding(defaults: UserDefaults = .standard) -> Bool {
+        guard !defaults.bool(forKey: hasPresentedOnboardingKey) else { return false }
+
+        defaults.set(true, forKey: hasPresentedOnboardingKey)
+        return defaults.data(forKey: PreferencesStore.defaultsKey) == nil
     }
 }
 

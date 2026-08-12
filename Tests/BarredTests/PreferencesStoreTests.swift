@@ -63,3 +63,26 @@ struct PreferencesStoreTests {
         #expect(second.preferences.showBarredBarOnClick == false)
     }
 }
+
+@MainActor
+struct AppDelegateTests {
+    @Test("onboarding is presented once for a new install")
+    func onboardingIsPresentedOnceForNewInstall() throws {
+        let suiteName = "AppDelegateTests.newInstall.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        #expect(AppDelegate.shouldPresentOnboarding(defaults: defaults))
+        #expect(!AppDelegate.shouldPresentOnboarding(defaults: defaults))
+    }
+
+    @Test("existing installs are not shown first-launch onboarding")
+    func existingInstallDoesNotPresentOnboarding() throws {
+        let suiteName = "AppDelegateTests.existingInstall.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set(Data("{}".utf8), forKey: PreferencesStore.defaultsKey)
+
+        #expect(!AppDelegate.shouldPresentOnboarding(defaults: defaults))
+    }
+}

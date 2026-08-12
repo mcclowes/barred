@@ -111,29 +111,12 @@ struct ItemsSettingsView: View {
 
 struct GeneralSettingsView: View {
     @Environment(MenuBarController.self) private var controller
-    @State private var isUpdatingLaunchAtLogin = false
-    @State private var launchAtLoginErrorMessage: String?
 
     var body: some View {
         @Bindable var controller = controller
 
         Form {
-            Toggle("Launch at login", isOn: $controller.preferences.launchAtLogin)
-                .onChange(of: controller.preferences.launchAtLogin) { oldValue, newValue in
-                    guard !isUpdatingLaunchAtLogin else { return }
-                    isUpdatingLaunchAtLogin = true
-                    defer { isUpdatingLaunchAtLogin = false }
-                    do {
-                        if newValue {
-                            try SMAppService.mainApp.register()
-                        } else {
-                            try SMAppService.mainApp.unregister()
-                        }
-                    } catch {
-                        launchAtLoginErrorMessage = error.localizedDescription
-                        controller.preferences.launchAtLogin = oldValue
-                    }
-                }
+            LaunchAtLoginToggle("Launch at login")
 
             Toggle("Show Barred bar on click", isOn: $controller.preferences.showBarredBarOnClick)
 
@@ -150,17 +133,54 @@ struct GeneralSettingsView: View {
             }
         }
         .padding()
-        .alert(
-            "Couldn't update Login Items",
-            isPresented: Binding(
-                get: { launchAtLoginErrorMessage != nil },
-                set: { if !$0 { launchAtLoginErrorMessage = nil } }
-            )
-        ) {
-            Button("OK") { launchAtLoginErrorMessage = nil }
-        } message: {
-            Text(launchAtLoginErrorMessage ?? "")
-        }
+    }
+}
+
+struct LaunchAtLoginToggle: View {
+    @Environment(MenuBarController.self) private var controller
+    @State private var isUpdating = false
+    @State private var errorMessage: String?
+
+    let title: LocalizedStringKey
+
+    init(_ title: LocalizedStringKey) {
+        self.title = title
+    }
+
+    var body: some View {
+        @Bindable var controller = controller
+
+        Toggle(title, isOn: $controller.preferences.launchAtLogin)
+            .onChange(of: controller.preferences.launchAtLogin) { oldValue, newValue in
+                guard !isUpdating else { return }
+                isUpdating = true
+                defer { isUpdating = false }
+                do {
+                    if newValue {
+                        try SMAppService.mainApp.register()
+                    } else {
+                        try SMAppService.mainApp.unregister()
+                    }
+                } catch {
+                    errorMessage = error.localizedDescription
+                    controller.preferences.launchAtLogin = oldValue
+                }
+            }
+            .alert(
+                "Couldn't update Login Items",
+                isPresented: Binding(
+                    get: { errorMessage != nil },
+                    set: {
+                        if !$0 {
+                            errorMessage = nil
+                        }
+                    }
+                )
+            ) {
+                Button("OK") { errorMessage = nil }
+            } message: {
+                Text(errorMessage ?? "")
+            }
     }
 }
 

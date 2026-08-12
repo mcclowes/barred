@@ -32,6 +32,19 @@ struct OnboardingView: View {
                 controller.accessibilityService.checkTrust()
             }
             .font(.caption)
+
+            Divider()
+
+            VStack(spacing: 8) {
+                Label("Always have Barred ready", systemImage: "bolt.circle")
+                    .font(.headline)
+
+                Text("Recommended so your menu bar stays organised after every restart.")
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.secondary)
+
+                LaunchAtLoginToggle("Launch Barred at login")
+            }
         }
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
