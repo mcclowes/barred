@@ -68,10 +68,12 @@ jobs:
 
       - name: Summary
         run: |
-          echo "### Version bump PR created :rocket:" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Bump type:** ${{ inputs.bump }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **New version:** ${{ steps.bump.outputs.new_version }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Branch:** \`bump/v${{ steps.bump.outputs.new_version }}\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "Merge the PR to trigger the release." >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "### Version bump PR created :rocket:"
+            echo ""
+            echo "- **Bump type:** ${{ inputs.bump }}"
+            echo "- **New version:** ${{ steps.bump.outputs.new_version }}"
+            echo "- **Branch:** \`bump/v${{ steps.bump.outputs.new_version }}\`"
+            echo ""
+            echo "Merge the PR to trigger the release."
+          } >> "$GITHUB_STEP_SUMMARY"
