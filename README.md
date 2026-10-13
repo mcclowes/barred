@@ -52,6 +52,7 @@ make app                   # build .app bundle
 make run                   # build and run
 make test                  # run tests
 make test-build-helper     # check packaging with stubbed build/signing tools
+make test-bump-helper      # check version bumps with stubbed Git
 ```
 
 See the [Makefile](Makefile) for all available targets.

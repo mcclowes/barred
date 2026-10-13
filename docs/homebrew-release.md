@@ -43,6 +43,8 @@ make bump TYPE=patch
 
 Use `minor` or `major` as appropriate. The [helper](../Scripts/bump-version.sh) updates `MARKETING_VERSION` in `project.yml`, creates a version commit, and creates an annotated `vX.Y.Z` tag. It doesn't update `CURRENT_PROJECT_VERSION`; update that build number before the bump when needed. Without `PUSH=--push`, the helper leaves the commit and tag local and prints the exact push commands.
 
+The helper accepts only `major`, `minor`, or `patch`, followed by an optional `--push`. Unsupported or empty arguments and extra operands return usage on stderr with exit status 2 before reading or changing project metadata.
+
 Review the version commit and tag, then push the release commit and that specific tag when ready. The tag must match the app's `MARKETING_VERSION`: the workflow derives the cask version from the tag and the app version from `project.yml`. Pushing any `v*` tag starts the release workflow. `make bump TYPE=patch PUSH=--push` also pushes immediately, so use the local-only form when reviewing first.
 
 ## What the workflow publishes

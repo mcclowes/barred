@@ -2,7 +2,7 @@ SCHEME = Barred
 PROJECT = Barred.xcodeproj
 BUILD_DIR = $(shell xcodebuild -project $(PROJECT) -scheme $(SCHEME) -showBuildSettings 2>/dev/null | grep -m1 'BUILT_PRODUCTS_DIR' | awk '{print $$NF}')
 
-.PHONY: build release app run test test-build-helper test-cask-helper format format-check lint clean generate install-hooks bump help
+.PHONY: build release app run test test-build-helper test-cask-helper test-bump-helper format format-check lint clean generate install-hooks bump help
 
 ## Build
 
@@ -28,6 +28,9 @@ test-build-helper: ## Check build helper with stubbed signing tools
 
 test-cask-helper: ## Check release architecture metadata with a stubbed inspector
 	bash Scripts/test-cask-architectures.sh
+
+test-bump-helper: ## Check version helper arguments with stubbed Git
+	bash Scripts/test-bump-version.sh
 
 ## Lint & format
 
