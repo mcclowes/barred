@@ -60,11 +60,6 @@ echo -n "APPL????" > "$APP_BUNDLE/Contents/PkgInfo"
 # Code signing — use CODESIGN_IDENTITY env var, or fall back to "Barred Dev" local cert, then ad-hoc
 SIGN_IDENTITY="${CODESIGN_IDENTITY:-${DEVELOPER_ID_APPLICATION:-}}"
 ENTITLEMENTS="$PROJECT_DIR/Resources/Barred.entitlements"
-KEYCHAIN_ARG=""
-
-if [ -n "${KEYCHAIN_PATH:-}" ]; then
-    KEYCHAIN_ARG="--keychain $KEYCHAIN_PATH"
-fi
 
 if [ -z "$SIGN_IDENTITY" ] && security find-identity -v -p codesigning | grep -q "Barred Dev"; then
     SIGN_IDENTITY="Barred Dev"
@@ -72,20 +67,14 @@ fi
 
 if [ -n "$SIGN_IDENTITY" ]; then
     echo "Signing app with: $SIGN_IDENTITY"
+    SIGN_ARGS=(--force --sign "$SIGN_IDENTITY" --entitlements "$ENTITLEMENTS" --options runtime --timestamp)
+    if [ -n "${KEYCHAIN_PATH:-}" ]; then
+        SIGN_ARGS+=(--keychain "$KEYCHAIN_PATH")
+    fi
     # Sign the main executable first, then the bundle (avoid deprecated --deep)
-    codesign --force --sign "$SIGN_IDENTITY" \
-        --entitlements "$ENTITLEMENTS" \
-        --options runtime \
-        --timestamp \
-        $KEYCHAIN_ARG \
-        "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
+    codesign "${SIGN_ARGS[@]}" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 
-    codesign --force --sign "$SIGN_IDENTITY" \
-        --entitlements "$ENTITLEMENTS" \
-        --options runtime \
-        --timestamp \
-        $KEYCHAIN_ARG \
-        "$APP_BUNDLE"
+    codesign "${SIGN_ARGS[@]}" "$APP_BUNDLE"
 
     echo "Verifying signature..."
     codesign --verify --strict "$APP_BUNDLE"

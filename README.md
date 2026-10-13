@@ -51,6 +51,7 @@ make build                 # debug build
 make app                   # build .app bundle
 make run                   # build and run
 make test                  # run tests
+make test-build-helper     # check packaging with stubbed build/signing tools
 ```
 
 See the [Makefile](Makefile) for all available targets.
