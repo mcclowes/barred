@@ -18,6 +18,7 @@ make app                 # build .app bundle via Scripts/build-app.sh
 make run                 # build and run
 make test                # run tests
 make test-build-helper    # check packaging with stubbed build/signing tools
+make test-cask-helper     # check release architecture metadata without building
 make format              # auto-format (swiftformat)
 make format-check        # check formatting
 make lint                # run SwiftLint (strict)

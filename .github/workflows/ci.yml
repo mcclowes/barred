@@ -15,11 +15,13 @@ jobs:
       - name: Install tools
         run: brew install swiftformat swiftlint shellcheck
 
-      - name: Check build helper
+      - name: Check release helpers
         run: |
-          bash -n Scripts/build-app.sh Scripts/test-build-app.sh
-          shellcheck Scripts/build-app.sh Scripts/test-build-app.sh
-          make test-build-helper
+          bash -n Scripts/build-app.sh Scripts/test-build-app.sh \
+            Scripts/cask-architectures.sh Scripts/test-cask-architectures.sh
+          shellcheck Scripts/build-app.sh Scripts/test-build-app.sh \
+            Scripts/cask-architectures.sh Scripts/test-cask-architectures.sh
+          make test-build-helper test-cask-helper
 
       - name: Lint
         run: make lint

@@ -100,8 +100,12 @@ jobs:
         id: artifact
         run: |
           BUILD_DIR=$(xcodebuild -project Barred.xcodeproj -scheme Barred -configuration Release -showBuildSettings 2>/dev/null | grep -m1 'BUILT_PRODUCTS_DIR' | awk '{print $NF}')
-          echo "zip_path=${BUILD_DIR}/Barred.zip" >> "$GITHUB_OUTPUT"
-          echo "sha256=$(shasum -a 256 "${BUILD_DIR}/Barred.zip" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          cask_arches=$(bash Scripts/cask-architectures.sh "${BUILD_DIR}/Barred.app/Contents/MacOS/Barred")
+          {
+            echo "zip_path=${BUILD_DIR}/Barred.zip"
+            echo "sha256=$(shasum -a 256 "${BUILD_DIR}/Barred.zip" | awk '{print $1}')"
+            echo "cask_arches=$cask_arches"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -136,6 +140,7 @@ jobs:
             homepage "https://github.com/mcclowes/barred"
 
             depends_on macos: :sonoma
+            depends_on arch: [${{ steps.artifact.outputs.cask_arches }}]
 
             app "Barred.app"
 
