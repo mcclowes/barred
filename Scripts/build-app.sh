@@ -7,6 +7,7 @@ BUILD_DIR="$PROJECT_DIR/.build"
 APP_NAME="Barred"
 APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
 ZIP_PATH="$BUILD_DIR/$APP_NAME.zip"
+BUILT_PLIST="$BUILD_DIR/release/$APP_NAME.app/Contents/Info.plist"
 
 # Optional signing config (set these env vars for signed builds)
 # DEVELOPER_ID_APPLICATION  — e.g. "Developer ID Application: Your Name (TEAMID)"
@@ -27,6 +28,11 @@ xcodebuild -project Barred.xcodeproj -scheme Barred -configuration Release \
     CONFIGURATION_BUILD_DIR="$BUILD_DIR/release" \
     build
 
+if [ ! -f "$BUILT_PLIST" ]; then
+    echo "Built app metadata not found: $BUILT_PLIST" >&2
+    exit 1
+fi
+
 echo "Creating app bundle..."
 rm -rf "$APP_BUNDLE"
 mkdir -p "$APP_BUNDLE/Contents/MacOS"
@@ -35,13 +41,14 @@ mkdir -p "$APP_BUNDLE/Contents/Resources"
 # Copy executable from xcodebuild output
 cp "$BUILD_DIR/release/Barred.app/Contents/MacOS/Barred" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 
-# Copy Info.plist and resolve Xcode build variables
-cp "$PROJECT_DIR/Resources/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c "Set :CFBundleExecutable $APP_NAME" "$APP_BUNDLE/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.mcclowes.barred" "$APP_BUNDLE/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${VERSION:-1.0.0}" "$APP_BUNDLE/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${BUILD_NUMBER:-1}" "$APP_BUNDLE/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c "Set :LSMinimumSystemVersion 14.0" "$APP_BUNDLE/Contents/Info.plist"
+# Preserve Xcode's resolved metadata unless packaging overrides are explicit.
+cp "$BUILT_PLIST" "$APP_BUNDLE/Contents/Info.plist"
+if [ -n "${VERSION:-}" ]; then
+    /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$APP_BUNDLE/Contents/Info.plist"
+fi
+if [ -n "${BUILD_NUMBER:-}" ]; then
+    /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$APP_BUNDLE/Contents/Info.plist"
+fi
 
 # Compile the app icon from the Icon Composer file (generates barred.icns + Assets.car)
 if [ -d "$PROJECT_DIR/barred.icon" ]; then

@@ -1,6 +1,7 @@
 #!/bin/bash
 # Exercise the build helper with isolated files and stubbed signing tools.
 set -euo pipefail
+unset VERSION BUILD_NUMBER
 
 barred_test_source="$(cd "$(dirname "$0")/.." && pwd)"
 barred_test_temp=$(mktemp -d "${TMPDIR:-/tmp}/barred-build-helper.XXXXXX")
@@ -31,6 +32,16 @@ for argument in "$@"; do
 done
 mkdir -p "$output/Barred.app/Contents/MacOS"
 echo fixture > "$output/Barred.app/Contents/MacOS/Barred"
+if [ "${OMIT_BUILT_PLIST:-0}" = 0 ]; then
+    cp Resources/Info.plist "$output/Barred.app/Contents/Info.plist"
+    /usr/libexec/PlistBuddy -c 'Set :CFBundleExecutable Barred' "$output/Barred.app/Contents/Info.plist"
+    /usr/libexec/PlistBuddy -c 'Set :CFBundleIdentifier com.mcclowes.barred' "$output/Barred.app/Contents/Info.plist"
+    /usr/libexec/PlistBuddy -c 'Set :CFBundleShortVersionString 4.5.6' "$output/Barred.app/Contents/Info.plist"
+    /usr/libexec/PlistBuddy -c 'Set :CFBundleVersion 78' "$output/Barred.app/Contents/Info.plist"
+    /usr/libexec/PlistBuddy -c 'Set :LSMinimumSystemVersion 14.2' "$output/Barred.app/Contents/Info.plist"
+    /usr/libexec/PlistBuddy -c 'Set :CFBundleName BuiltBarred' "$output/Barred.app/Contents/Info.plist"
+    /usr/libexec/PlistBuddy -c 'Add :DTSDKName string macosx26.0' "$output/Barred.app/Contents/Info.plist"
+fi
 STUB
 
     cat > "$barred_fixture/bin/codesign" <<'STUB'
@@ -89,17 +100,56 @@ STUB
 
 run_helper() {
     local identity="$1" keychain="$2" verification="$3"
+    shift 3
     if env PATH="$barred_fixture/bin:/usr/bin:/bin" BASH_ENV=/dev/null \
         HELPER_LOG="$barred_fixture/calls" EXPECTED_KEYCHAIN="$keychain" \
         EXPECTED_IDENTITY="${identity:--}" VERIFY_STATUS="$verification" \
         CODESIGN_IDENTITY="$identity" KEYCHAIN_PATH="$keychain" \
         DEVELOPER_ID_APPLICATION='' APPLE_ID='' APPLE_ID_PASSWORD='' APPLE_TEAM_ID='' \
+        "$@" \
         /bin/bash "$barred_fixture/Scripts/build-app.sh" > "$barred_fixture/output" 2>&1; then
         barred_status=0
     else
         barred_status=$?
     fi
 }
+
+assert_plist() {
+    local key="$1" expected="$2" actual
+    actual=$(/usr/libexec/PlistBuddy -c "Print :$key" "$barred_fixture/.build/Barred.app/Contents/Info.plist")
+    [ "$actual" = "$expected" ] || fail "Expected $key=$expected; received $actual"
+}
+
+new_fixture
+run_helper 'Fixture Identity' '' 0
+[ "$barred_status" = 0 ] || fail 'Build helper failed with resolved metadata'
+assert_plist CFBundleShortVersionString 4.5.6
+assert_plist CFBundleVersion 78
+assert_plist CFBundleName BuiltBarred
+assert_plist LSMinimumSystemVersion 14.2
+assert_plist DTSDKName macosx26.0
+
+for overrides in both version build empty; do
+    new_fixture
+    case "$overrides" in
+        both) run_helper 'Fixture Identity' '' 0 VERSION=8.9.10 BUILD_NUMBER=900 ;;
+        version) run_helper 'Fixture Identity' '' 0 VERSION=8.9.10 ;;
+        build) run_helper 'Fixture Identity' '' 0 BUILD_NUMBER=900 ;;
+        empty) run_helper 'Fixture Identity' '' 0 VERSION='' BUILD_NUMBER='' ;;
+    esac
+    [ "$barred_status" = 0 ] || fail 'Build helper failed with packaging overrides'
+    case "$overrides" in
+        both|version) assert_plist CFBundleShortVersionString 8.9.10 ;;
+        *) assert_plist CFBundleShortVersionString 4.5.6 ;;
+    esac
+    case "$overrides" in
+        both|build) assert_plist CFBundleVersion 900 ;;
+        *) assert_plist CFBundleVersion 78 ;;
+    esac
+    assert_plist CFBundleName BuiltBarred
+    assert_plist LSMinimumSystemVersion 14.2
+    assert_plist DTSDKName macosx26.0
+done
 
 for keychain in '' "$barred_test_temp/signing.keychain-db" \
     "$barred_test_temp/signing keys.keychain-db" "$barred_test_temp/signing[draft]*.keychain-db"; do
@@ -122,4 +172,15 @@ run_helper 'Fixture Identity' "$barred_test_temp/signing keys.keychain-db" 42
 [ "$(cat "$barred_fixture/calls")" = $'generate\nbuild\nsign\nsign\nverify' ] || fail 'Tools ran after signature verification failed'
 [ ! -e "$barred_fixture/.build/Barred.zip" ] || fail 'Failed verification created an archive'
 
-echo 'Passed 6 build-helper scenarios; no real builds, signing, or keychain access ran.'
+new_fixture
+mkdir -p "$barred_fixture/.build/Barred.app"
+echo previous > "$barred_fixture/.build/Barred.app/previous-artifact"
+echo previous-zip > "$barred_fixture/.build/Barred.zip"
+run_helper 'Fixture Identity' '' 0 OMIT_BUILT_PLIST=1
+[ "$barred_status" -ne 0 ] || fail 'Missing built metadata was accepted'
+[ -f "$barred_fixture/.build/Barred.app/previous-artifact" ] || fail 'Missing metadata removed the previous app'
+[ "$(cat "$barred_fixture/.build/Barred.app/previous-artifact")" = previous ] || fail 'Missing metadata changed the previous app'
+[ "$(cat "$barred_fixture/.build/Barred.zip")" = previous-zip ] || fail 'Missing metadata changed the previous archive'
+[ "$(cat "$barred_fixture/calls")" = $'generate\nbuild' ] || fail 'Tools ran after missing metadata'
+
+echo 'Passed 12 build-helper scenarios; no real builds, signing, or keychain access ran.'

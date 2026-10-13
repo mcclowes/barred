@@ -56,6 +56,8 @@ make test-build-helper     # check packaging with stubbed build/signing tools
 
 See the [Makefile](Makefile) for all available targets.
 
+`make app` preserves Xcode's built version, build number, and resolved app metadata. Set `VERSION` or `BUILD_NUMBER` to override only that value for packaging.
+
 ## License
 
 TBD
