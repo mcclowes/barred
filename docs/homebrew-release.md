@@ -3,62 +3,63 @@
 Users install with:
 
 ```bash
-brew tap mcclowes/barred
-brew install --cask barred
+brew install --cask mcclowes/barred/barred
 ```
 
-## Setup
+The fully qualified command grants trust to this cask, as described in [Homebrew's tap trust guidance](https://docs.brew.sh/Tap-Trust#installing-from-a-tap). The current v1.1.4 download requires an Apple silicon Mac and macOS 14 (Sonoma) or later.
 
-### 1. Create the tap repo
+## Existing tap
+
+The public tap is [mcclowes/homebrew-barred](https://github.com/mcclowes/homebrew-barred). The [release workflow](../.github/workflows/release.yml) writes `Casks/barred.rb` there using the release version, ZIP checksum, and executable architectures. The root repository's `Casks/barred.rb` is an old placeholder with no usable checksum; use the generated cask in the tap.
+
+## Release credentials
+
+Configure these Actions secrets in the `mcclowes/barred` repository:
+
+| Secret | Purpose |
+| --- | --- |
+| `DEVELOPER_ID_CERTIFICATE_BASE64` | Base64-encoded `.p12` containing the Developer ID Application certificate and its private key |
+| `DEVELOPER_ID_CERTIFICATE_PASSWORD` | Password for that `.p12` file |
+| `APPLE_ID` | Apple account used for notarization |
+| `APPLE_ID_PASSWORD` | App-specific password for that account |
+| `APPLE_TEAM_ID` | Developer team ID used for signing and notarization |
+| `RELEASE_TOKEN` | GitHub token able to read and update `Casks/barred.rb` in `mcclowes/homebrew-barred` |
+
+Certificate import, signing, notarization, and the tap update run unconditionally. Missing credentials fail those steps; this workflow has no unsigned-release fallback. GitHub Release creation uses the workflow's built-in token with `contents: write`; the separate `RELEASE_TOKEN` is used for the tap.
+
+For certificate creation, follow [Apple's Developer ID certificate guidance](https://developer.apple.com/help/account/certificates/create-developer-id-certificates/), then export the certificate and private key as a password-protected `.p12` in Keychain Access. Encode that file locally for `DEVELOPER_ID_CERTIFICATE_BASE64`:
 
 ```bash
-gh repo create mcclowes/homebrew-barred --public --clone
-cp Casks/barred.rb homebrew-barred/Casks/barred.rb
-cd homebrew-barred && git add . && git commit -m "Add barred cask" && git push
+base64 -i Certificates.p12 | pbcopy
 ```
 
-### 2. Add GitHub secrets
+## Prepare a version
 
-Add these to the `barred` repo (Settings > Secrets and variables > Actions):
-
-| Secret | Description |
-|---|---|
-| `CERTIFICATE_P12` | Base64-encoded `.p12` of your Developer ID Application cert (`base64 -i cert.p12 \| pbcopy`) |
-| `CERTIFICATE_PASSWORD` | Password for the `.p12` file |
-| `DEVELOPER_ID_APPLICATION` | Full identity string, e.g. `Developer ID Application: Max Clowes (ABCDE12345)` |
-| `APPLE_ID` | Your Apple ID email |
-| `APPLE_ID_PASSWORD` | App-specific password — generate at [appleid.apple.com](https://appleid.apple.com) > Sign-In and Security > App-Specific Passwords |
-| `APPLE_TEAM_ID` | Your 10-character team ID (visible in Apple Developer portal) |
-| `HOMEBREW_TAP_TOKEN` | A GitHub personal access token with push access to `mcclowes/homebrew-barred` |
-
-All signing/notarization secrets are optional. Without them, the release still works but produces an unsigned build (users must run `xattr -cr /Applications/Barred.app` after install).
-
-### 3. Create a release
+From a clean checkout with the intended release changes committed, use the existing version helper:
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+make bump TYPE=patch
 ```
 
-The GitHub Actions workflow (`.github/workflows/release.yml`) will automatically:
+Use `minor` or `major` as appropriate. The [helper](../Scripts/bump-version.sh) updates `MARKETING_VERSION` in `project.yml`, creates a version commit, and creates an annotated `vX.Y.Z` tag. It doesn't update `CURRENT_PROJECT_VERSION`; update that build number before the bump when needed. Without `PUSH=--push`, the helper leaves the commit and tag local and prints the exact push commands.
 
-1. Build the app on a macOS runner
-2. Sign and notarize (if secrets are configured)
-3. Create a GitHub Release with `Barred.zip`
-4. Update the cask SHA and version in `homebrew-barred` (if `HOMEBREW_TAP_TOKEN` is set)
+Review the version commit and tag, then push the release commit and that specific tag when ready. The tag must match the app's `MARKETING_VERSION`: the workflow derives the cask version from the tag and the app version from `project.yml`. Pushing any `v*` tag starts the release workflow. `make bump TYPE=patch PUSH=--push` also pushes immediately, so use the local-only form when reviewing first.
 
-## Getting a Developer ID certificate
+## What the workflow publishes
 
-1. Enrol in the [Apple Developer Program](https://developer.apple.com/programs/) ($99/yr)
-2. In Xcode: Settings > Accounts > Manage Certificates > + > Developer ID Application
-3. Export the certificate as `.p12` from Keychain Access
-4. Base64-encode it: `base64 -i Certificates.p12 | pbcopy`
+The workflow runs on macOS 26 with Xcode 26 and:
 
-## Updating
+1. Generates the Xcode project and runs the hosted app tests.
+2. Imports the signing certificate and builds a signed Release app.
+3. Submits the app for notarization, staples the ticket, and recreates `Barred.zip`.
+4. Reads the ZIP checksum and executable architectures, then publishes a GitHub Release with the ZIP.
+5. Writes the generated cask to the existing Homebrew tap with the version, checksum, macOS requirement, and supported architectures.
+6. Attempts to delete the temporary signing keychain even if an earlier step fails.
 
-Just push a new tag. The workflow handles everything:
+## Verify delivery
 
-```bash
-git tag v0.2.0
-git push origin v0.2.0
-```
+Check the Actions result, the GitHub Release's `Barred.zip`, and the tap's generated cask. The cask's version, URL, SHA-256, and architecture requirements must match the published artifact.
+
+The app release is published before the tap update. If that last update fails, the ZIP may already be public while Homebrew still points to the previous release. Check both before calling delivery complete.
+
+Local `make app` packaging has its own credential handling and optional notarization; it isn't the tagged release workflow. See the [command catalog](../.clip/commands.md) for command effects and isolated helper checks.
