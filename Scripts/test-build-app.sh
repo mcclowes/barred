@@ -19,12 +19,14 @@ new_fixture() {
     cat > "$barred_fixture/bin/xcodegen" <<'STUB'
 #!/bin/bash
 echo generate >> "$HELPER_LOG"
+exit "${GENERATE_STATUS:-0}"
 STUB
 
     cat > "$barred_fixture/bin/xcodebuild" <<'STUB'
 #!/bin/bash
 set -eu
 echo build >> "$HELPER_LOG"
+if [ "${BUILD_STATUS:-0}" -ne 0 ]; then exit "$BUILD_STATUS"; fi
 for argument in "$@"; do
     if [[ "$argument" == CONFIGURATION_BUILD_DIR=* ]]; then
         output="${argument#CONFIGURATION_BUILD_DIR=}"
@@ -70,6 +72,7 @@ expected_count=0
 [ -z "$EXPECTED_KEYCHAIN" ] || expected_count=1
 [ "$keychain_count" = "$expected_count" ] || exit 34
 [ "$identity" = "$EXPECTED_IDENTITY" ] || exit 32
+exit "${SIGN_STATUS:-0}"
 STUB
 
     cat > "$barred_fixture/bin/security" <<'STUB'
@@ -86,14 +89,62 @@ STUB
 
     cat > "$barred_fixture/bin/xcrun" <<'STUB'
 #!/bin/bash
-echo 'Unexpected icon compilation or notarization' >&2
+set -eu
+case "$1" in
+    actool)
+        echo icon >> "$HELPER_LOG"
+        shift
+        while [ "$#" -gt 0 ]; do
+            case "$1" in
+                --compile) output="$2"; shift ;;
+                --output-partial-info-plist) info="$2"; shift ;;
+            esac
+            shift
+        done
+        echo fixture-icon > "$output/barred.icns"
+        echo fixture-info > "$info"
+        exit "${ICON_STATUS:-0}"
+        ;;
+    notarytool)
+        echo notary >> "$HELPER_LOG"
+        exit "${NOTARY_STATUS:-0}"
+        ;;
+    stapler)
+        echo staple >> "$HELPER_LOG"
+        echo fixture-ticket > "$3/Contents/ticket"
+        exit "${STAPLE_STATUS:-0}"
+        ;;
+esac
 exit 33
 STUB
 
     cat > "$barred_fixture/bin/ditto" <<'STUB'
 #!/bin/bash
+set -eu
 echo archive >> "$HELPER_LOG"
-echo fixture > "${!#}"
+if [ "${ARCHIVE_STATUS:-0}" -ne 0 ] || \
+    { [ "${REZIP_STATUS:-0}" -ne 0 ] && [ "$(grep -c '^archive$' "$HELPER_LOG")" -eq 2 ]; }; then
+    echo partial > "${!#}"
+    exit "${ARCHIVE_STATUS:-${REZIP_STATUS:-73}}"
+fi
+if [ "${CORRUPT_ARCHIVE:-0}" = 1 ]; then
+    echo partial > "${!#}"
+    exit 0
+fi
+exec /usr/bin/ditto "$@"
+STUB
+    cat > "$barred_fixture/bin/cp" <<'STUB'
+#!/bin/bash
+if [ "${COPY_STATUS:-0}" -ne 0 ]; then exit "$COPY_STATUS"; fi
+exec /bin/cp "$@"
+STUB
+    cat > "$barred_fixture/bin/shasum" <<'STUB'
+#!/bin/bash
+if [ "${HASH_STATUS:-0}" -ne 0 ]; then
+    echo partial-hash
+    exit "$HASH_STATUS"
+fi
+exec /usr/bin/shasum "$@"
 STUB
     chmod +x "$barred_fixture/bin/"*
 }
@@ -183,4 +234,71 @@ run_helper 'Fixture Identity' '' 0 OMIT_BUILT_PLIST=1
 [ "$(cat "$barred_fixture/.build/Barred.zip")" = previous-zip ] || fail 'Missing metadata changed the previous archive'
 [ "$(cat "$barred_fixture/calls")" = $'generate\nbuild' ] || fail 'Tools ran after missing metadata'
 
-echo 'Passed 12 build-helper scenarios; no real builds, signing, or keychain access ran.'
+new_fixture
+mkdir -p "$barred_fixture/.build/Barred.app"
+echo previous > "$barred_fixture/.build/Barred.app/previous-artifact"
+echo previous-zip > "$barred_fixture/.build/Barred.zip"
+run_helper 'Fixture Identity' '' 0 SIGN_STATUS=43
+[ "$barred_status" = 43 ] || fail 'Signing failure was not preserved'
+[ -f "$barred_fixture/.build/Barred.app/previous-artifact" ] || fail 'Signing failure removed the previous app'
+[ "$(cat "$barred_fixture/.build/Barred.app/previous-artifact")" = previous ] || fail 'Signing failure changed the previous app'
+[ "$(cat "$barred_fixture/.build/Barred.zip")" = previous-zip ] || fail 'Signing failure changed the previous ZIP'
+assert_preserved() {
+    [ "$(cat "$barred_fixture/.build/Barred.app/previous-artifact")" = previous ] || fail 'Preparation failure changed the previous app'
+    [ "$(cat "$barred_fixture/.build/Barred.zip")" = previous-zip ] || fail 'Preparation failure changed the previous ZIP'
+    [ -z "$(find "$barred_fixture/.build" -name '.barred-package.*' -print)" ] || fail 'Preparation left staging behind'
+    if grep -q 'Done! Outputs:' "$barred_fixture/output"; then fail 'Preparation failure printed success'; fi
+}
+
+for failure in generate build copy icon verify archive corrupt hash notary staple rezip; do
+    new_fixture
+    mkdir -p "$barred_fixture/.build/Barred.app" "$barred_fixture/barred.icon"
+    echo previous > "$barred_fixture/.build/Barred.app/previous-artifact"
+    echo previous-zip > "$barred_fixture/.build/Barred.zip"
+    case "$failure" in
+        generate) run_helper 'Fixture Identity' '' 0 GENERATE_STATUS=41 ;;
+        build) run_helper 'Fixture Identity' '' 0 BUILD_STATUS=42 ;;
+        copy) run_helper 'Fixture Identity' '' 0 COPY_STATUS=44 ;;
+        icon) run_helper 'Fixture Identity' '' 0 ICON_STATUS=45 ;;
+        verify) run_helper 'Fixture Identity' '' 46 ;;
+        archive) run_helper 'Fixture Identity' '' 0 ARCHIVE_STATUS=47 ;;
+        corrupt) run_helper 'Fixture Identity' '' 0 CORRUPT_ARCHIVE=1 ;;
+        hash) run_helper 'Fixture Identity' '' 0 HASH_STATUS=48 ;;
+        notary|staple|rezip)
+            case "$failure" in
+                notary) failure_setting=NOTARY_STATUS=49 ;;
+                staple) failure_setting=STAPLE_STATUS=50 ;;
+                rezip) failure_setting=REZIP_STATUS=51 ;;
+            esac
+            run_helper 'Fixture Identity' '' 0 DEVELOPER_ID_APPLICATION='Fixture Identity' \
+                APPLE_ID=fixture@example.invalid APPLE_ID_PASSWORD=fixture-password \
+                APPLE_TEAM_ID=FIXTURETEAM "$failure_setting"
+            ;;
+    esac
+    [ "$barred_status" -ne 0 ] || fail "Preparation accepted failure: $failure"
+    assert_preserved
+done
+
+new_fixture
+mkdir -p "$barred_fixture/.build/Barred.app" "$barred_fixture/barred.icon"
+echo obsolete > "$barred_fixture/.build/Barred.app/removed-resource"
+echo previous-zip > "$barred_fixture/.build/Barred.zip"
+run_helper 'Fixture Identity' '' 0 DEVELOPER_ID_APPLICATION='Fixture Identity' \
+    APPLE_ID=fixture@example.invalid APPLE_ID_PASSWORD=fixture-password APPLE_TEAM_ID=FIXTURETEAM
+[ "$barred_status" = 0 ] || { cat "$barred_fixture/output" >&2; fail 'Staged notarization fixture failed'; }
+[ ! -e "$barred_fixture/.build/Barred.app/removed-resource" ] || fail 'Successful replacement kept obsolete app content'
+[ "$(unzip -p "$barred_fixture/.build/Barred.zip" Barred.app/Contents/ticket)" = fixture-ticket ] || fail 'Final ZIP omitted stapled fixture ticket'
+[ "$(grep -c '^archive$' "$barred_fixture/calls")" = 2 ] || fail 'Notarization did not rebuild the final ZIP'
+[ -z "$(find "$barred_fixture/.build" -name '.barred-package.*' -print)" ] || fail 'Success left staging behind'
+expected_hash=$(/usr/bin/shasum -a 256 "$barred_fixture/.build/Barred.zip")
+grep -Fx "SHA256: ${expected_hash%% *}" "$barred_fixture/output"
+
+new_fixture
+mkdir -p "$barred_fixture/.build/Barred.zip" "$barred_fixture/.build/Barred.app"
+echo previous > "$barred_fixture/.build/Barred.app/previous-artifact"
+echo preserve-directory > "$barred_fixture/.build/Barred.zip/sentinel"
+run_helper 'Fixture Identity' '' 0
+[ "$barred_status" -ne 0 ] || fail 'ZIP directory destination was accepted'
+[ "$(cat "$barred_fixture/.build/Barred.zip/sentinel")" = preserve-directory ] || fail 'ZIP directory destination changed'
+[ "$(cat "$barred_fixture/.build/Barred.app/previous-artifact")" = previous ] || fail 'ZIP directory rejection changed the previous app'
+echo 'Passed 26 build-helper scenarios; no real builds, signing, notarization, or keychain access ran.'

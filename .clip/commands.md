@@ -7,7 +7,7 @@ tools, without launching Barred or submitting a notarization request.
 
 ## Checks
 
-- Packaging helper tests: `make test-build-helper` - checks signing arguments and app metadata with isolated fixtures #quick #safe #ci
+- Packaging helper tests: `make test-build-helper` - checks metadata, signing arguments, staged failure preservation, and dummy notarization with isolated fixtures #quick #safe #ci
 - Cask helper tests: `make test-cask-helper` - checks release architecture detection with a stubbed inspector #quick #safe #ci
 - Version helper tests: `make test-bump-helper` - checks argument rejection and valid bumps with isolated metadata and stubbed Git #quick #safe #ci
 - Launch helper tests: `make test-run` - checks Debug launch paths and failure handling with stubbed build and launch tools #quick #safe #ci

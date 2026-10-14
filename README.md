@@ -67,6 +67,11 @@ including hosted tests that launch the app and packaging that can notarize it.
 
 `make app` preserves Xcode's built version, build number, and resolved app metadata. Set `VERSION` or `BUILD_NUMBER` to override only that value for packaging.
 
+The helper prepares and signs the app in temporary staging, validates the ZIP,
+and computes its checksum before replacing the normal outputs. Preparation
+failures keep the previous app and ZIP intact and remove staging. App and ZIP
+publication uses separate replacement operations.
+
 Maintainers: see the [Homebrew release guide](docs/homebrew-release.md) for signing credentials, version bumps, and publishing.
 
 ## License

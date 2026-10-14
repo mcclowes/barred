@@ -5,8 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 BUILD_DIR="$PROJECT_DIR/.build"
 APP_NAME="Barred"
-APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
-ZIP_PATH="$BUILD_DIR/$APP_NAME.zip"
+OUTPUT_APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
+OUTPUT_ZIP_PATH="$BUILD_DIR/$APP_NAME.zip"
 BUILT_PLIST="$BUILD_DIR/release/$APP_NAME.app/Contents/Info.plist"
 
 # Optional signing config (set these env vars for signed builds)
@@ -34,7 +34,16 @@ if [ ! -f "$BUILT_PLIST" ]; then
 fi
 
 echo "Creating app bundle..."
-rm -rf "$APP_BUNDLE"
+if [ -d "$OUTPUT_ZIP_PATH" ]; then
+    echo 'The ZIP destination is a directory.' >&2
+    exit 1
+fi
+PACKAGE_STAGING=$(mktemp -d "$BUILD_DIR/.barred-package.XXXXXX")
+trap 'rm -rf "$PACKAGE_STAGING"' EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+APP_BUNDLE="$PACKAGE_STAGING/$APP_NAME.app"
+ZIP_PATH="$PACKAGE_STAGING/$APP_NAME.zip"
 mkdir -p "$APP_BUNDLE/Contents/MacOS"
 mkdir -p "$APP_BUNDLE/Contents/Resources"
 
@@ -58,7 +67,7 @@ if [ -d "$PROJECT_DIR/barred.icon" ]; then
         --platform macosx \
         --minimum-deployment-target 14.0 \
         --app-icon barred \
-        --output-partial-info-plist /tmp/barred-asset-info.plist
+        --output-partial-info-plist "$PACKAGE_STAGING/asset-info.plist"
 fi
 
 # Create PkgInfo
@@ -95,10 +104,12 @@ fi
 
 # Create zip for distribution
 echo "Creating zip archive..."
-cd "$BUILD_DIR"
-rm -f "$ZIP_PATH"
-ditto -c -k --keepParent "$APP_NAME.app" "$ZIP_PATH"
-cd "$PROJECT_DIR"
+create_archive() {
+    rm -f "$ZIP_PATH"
+    (cd "$PACKAGE_STAGING" && ditto -c -k --keepParent "$APP_NAME.app" "$ZIP_PATH")
+    unzip -tq "$ZIP_PATH" >/dev/null
+}
+create_archive
 
 # Notarization
 if [ -n "${DEVELOPER_ID_APPLICATION:-}" ] && [ -n "${APPLE_ID:-}" ] && [ -n "${APPLE_ID_PASSWORD:-}" ] && [ -n "${APPLE_TEAM_ID:-}" ]; then
@@ -114,20 +125,25 @@ if [ -n "${DEVELOPER_ID_APPLICATION:-}" ] && [ -n "${APPLE_ID:-}" ] && [ -n "${A
 
     # Re-zip after stapling
     echo "Re-creating zip with stapled ticket..."
-    rm -f "$ZIP_PATH"
-    cd "$BUILD_DIR"
-    ditto -c -k --keepParent "$APP_NAME.app" "$ZIP_PATH"
-    cd "$PROJECT_DIR"
+    create_archive
 else
     echo "Skipping notarization (credentials not set)"
 fi
 
+PACKAGE_HASH=$(shasum -a 256 "$ZIP_PATH")
+PACKAGE_HASH=${PACKAGE_HASH%% *}
+
+# Publish only after every preparation step succeeds; the two outputs are not an atomic pair.
+rm -rf "$OUTPUT_APP_BUNDLE"
+mv "$APP_BUNDLE" "$OUTPUT_APP_BUNDLE"
+mv -f "$ZIP_PATH" "$OUTPUT_ZIP_PATH"
+
 echo ""
 echo "Done! Outputs:"
-echo "  App:  $APP_BUNDLE"
-echo "  Zip:  $ZIP_PATH"
+echo "  App:  $OUTPUT_APP_BUNDLE"
+echo "  Zip:  $OUTPUT_ZIP_PATH"
 echo ""
-echo "SHA256: $(shasum -a 256 "$ZIP_PATH" | awk '{print $1}')"
+echo "SHA256: $PACKAGE_HASH"
 echo ""
 echo "Note: You'll need to grant Accessibility access in"
 echo "  System Settings > Privacy & Security > Accessibility"
