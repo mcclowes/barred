@@ -9,8 +9,7 @@ A lightweight macOS menu bar manager. Hide, reorder, and organise your menu bar 
 **Homebrew (recommended):**
 
 ```bash
-brew tap mcclowes/barred
-brew install --cask barred
+brew install --cask mcclowes/barred/barred
 ```
 
 **Manual:**
@@ -37,6 +36,7 @@ Once granted, Barred appears in your menu bar. Click it to toggle the hidden ite
 ## Requirements
 
 - macOS 14 (Sonoma) or later
+- Apple silicon Mac for the current release download (v1.1.4)
 
 ## How it works
 
@@ -51,9 +51,28 @@ make build                 # debug build
 make app                   # build .app bundle
 make run                   # build and run
 make test                  # run tests
+make test-build-helper     # check packaging with stubbed build/signing tools
+make test-bump-helper      # check version bumps with stubbed Git
+make test-run              # check launch paths with stubbed build/launch tools
 ```
 
 See the [Makefile](Makefile) for all available targets.
+
+`make run` uses Debug build settings, preserves paths containing spaces, and stops
+on build or settings lookup failures. `make test-run` checks these behaviors
+without building or launching Barred.
+
+The [command catalog](.clip/commands.md) describes each target's effects,
+including hosted tests that launch the app and packaging that can notarize it.
+
+`make app` preserves Xcode's built version, build number, and resolved app metadata. Set `VERSION` or `BUILD_NUMBER` to override only that value for packaging.
+
+The helper prepares and signs the app in temporary staging, validates the ZIP,
+and computes its checksum before replacing the normal outputs. Preparation
+failures keep the previous app and ZIP intact and remove staging. App and ZIP
+publication uses separate replacement operations.
+
+Maintainers: see the [Homebrew release guide](docs/homebrew-release.md) for signing credentials, version bumps, and publishing.
 
 ## License
 

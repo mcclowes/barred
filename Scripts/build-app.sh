@@ -5,8 +5,9 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 BUILD_DIR="$PROJECT_DIR/.build"
 APP_NAME="Barred"
-APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
-ZIP_PATH="$BUILD_DIR/$APP_NAME.zip"
+OUTPUT_APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
+OUTPUT_ZIP_PATH="$BUILD_DIR/$APP_NAME.zip"
+BUILT_PLIST="$BUILD_DIR/release/$APP_NAME.app/Contents/Info.plist"
 
 # Optional signing config (set these env vars for signed builds)
 # DEVELOPER_ID_APPLICATION  — e.g. "Developer ID Application: Your Name (TEAMID)"
@@ -27,21 +28,36 @@ xcodebuild -project Barred.xcodeproj -scheme Barred -configuration Release \
     CONFIGURATION_BUILD_DIR="$BUILD_DIR/release" \
     build
 
+if [ ! -f "$BUILT_PLIST" ]; then
+    echo "Built app metadata not found: $BUILT_PLIST" >&2
+    exit 1
+fi
+
 echo "Creating app bundle..."
-rm -rf "$APP_BUNDLE"
+if [ -d "$OUTPUT_ZIP_PATH" ]; then
+    echo 'The ZIP destination is a directory.' >&2
+    exit 1
+fi
+PACKAGE_STAGING=$(mktemp -d "$BUILD_DIR/.barred-package.XXXXXX")
+trap 'rm -rf "$PACKAGE_STAGING"' EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+APP_BUNDLE="$PACKAGE_STAGING/$APP_NAME.app"
+ZIP_PATH="$PACKAGE_STAGING/$APP_NAME.zip"
 mkdir -p "$APP_BUNDLE/Contents/MacOS"
 mkdir -p "$APP_BUNDLE/Contents/Resources"
 
 # Copy executable from xcodebuild output
 cp "$BUILD_DIR/release/Barred.app/Contents/MacOS/Barred" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 
-# Copy Info.plist and resolve Xcode build variables
-cp "$PROJECT_DIR/Resources/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c "Set :CFBundleExecutable $APP_NAME" "$APP_BUNDLE/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.mcclowes.barred" "$APP_BUNDLE/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${VERSION:-1.0.0}" "$APP_BUNDLE/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${BUILD_NUMBER:-1}" "$APP_BUNDLE/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c "Set :LSMinimumSystemVersion 14.0" "$APP_BUNDLE/Contents/Info.plist"
+# Preserve Xcode's resolved metadata unless packaging overrides are explicit.
+cp "$BUILT_PLIST" "$APP_BUNDLE/Contents/Info.plist"
+if [ -n "${VERSION:-}" ]; then
+    /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$APP_BUNDLE/Contents/Info.plist"
+fi
+if [ -n "${BUILD_NUMBER:-}" ]; then
+    /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$APP_BUNDLE/Contents/Info.plist"
+fi
 
 # Compile the app icon from the Icon Composer file (generates barred.icns + Assets.car)
 if [ -d "$PROJECT_DIR/barred.icon" ]; then
@@ -51,7 +67,7 @@ if [ -d "$PROJECT_DIR/barred.icon" ]; then
         --platform macosx \
         --minimum-deployment-target 14.0 \
         --app-icon barred \
-        --output-partial-info-plist /tmp/barred-asset-info.plist
+        --output-partial-info-plist "$PACKAGE_STAGING/asset-info.plist"
 fi
 
 # Create PkgInfo
@@ -60,11 +76,6 @@ echo -n "APPL????" > "$APP_BUNDLE/Contents/PkgInfo"
 # Code signing — use CODESIGN_IDENTITY env var, or fall back to "Barred Dev" local cert, then ad-hoc
 SIGN_IDENTITY="${CODESIGN_IDENTITY:-${DEVELOPER_ID_APPLICATION:-}}"
 ENTITLEMENTS="$PROJECT_DIR/Resources/Barred.entitlements"
-KEYCHAIN_ARG=""
-
-if [ -n "${KEYCHAIN_PATH:-}" ]; then
-    KEYCHAIN_ARG="--keychain $KEYCHAIN_PATH"
-fi
 
 if [ -z "$SIGN_IDENTITY" ] && security find-identity -v -p codesigning | grep -q "Barred Dev"; then
     SIGN_IDENTITY="Barred Dev"
@@ -72,20 +83,14 @@ fi
 
 if [ -n "$SIGN_IDENTITY" ]; then
     echo "Signing app with: $SIGN_IDENTITY"
+    SIGN_ARGS=(--force --sign "$SIGN_IDENTITY" --entitlements "$ENTITLEMENTS" --options runtime --timestamp)
+    if [ -n "${KEYCHAIN_PATH:-}" ]; then
+        SIGN_ARGS+=(--keychain "$KEYCHAIN_PATH")
+    fi
     # Sign the main executable first, then the bundle (avoid deprecated --deep)
-    codesign --force --sign "$SIGN_IDENTITY" \
-        --entitlements "$ENTITLEMENTS" \
-        --options runtime \
-        --timestamp \
-        $KEYCHAIN_ARG \
-        "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
+    codesign "${SIGN_ARGS[@]}" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 
-    codesign --force --sign "$SIGN_IDENTITY" \
-        --entitlements "$ENTITLEMENTS" \
-        --options runtime \
-        --timestamp \
-        $KEYCHAIN_ARG \
-        "$APP_BUNDLE"
+    codesign "${SIGN_ARGS[@]}" "$APP_BUNDLE"
 
     echo "Verifying signature..."
     codesign --verify --strict "$APP_BUNDLE"
@@ -99,10 +104,12 @@ fi
 
 # Create zip for distribution
 echo "Creating zip archive..."
-cd "$BUILD_DIR"
-rm -f "$ZIP_PATH"
-ditto -c -k --keepParent "$APP_NAME.app" "$ZIP_PATH"
-cd "$PROJECT_DIR"
+create_archive() {
+    rm -f "$ZIP_PATH"
+    (cd "$PACKAGE_STAGING" && ditto -c -k --keepParent "$APP_NAME.app" "$ZIP_PATH")
+    unzip -tq "$ZIP_PATH" >/dev/null
+}
+create_archive
 
 # Notarization
 if [ -n "${DEVELOPER_ID_APPLICATION:-}" ] && [ -n "${APPLE_ID:-}" ] && [ -n "${APPLE_ID_PASSWORD:-}" ] && [ -n "${APPLE_TEAM_ID:-}" ]; then
@@ -118,20 +125,25 @@ if [ -n "${DEVELOPER_ID_APPLICATION:-}" ] && [ -n "${APPLE_ID:-}" ] && [ -n "${A
 
     # Re-zip after stapling
     echo "Re-creating zip with stapled ticket..."
-    rm -f "$ZIP_PATH"
-    cd "$BUILD_DIR"
-    ditto -c -k --keepParent "$APP_NAME.app" "$ZIP_PATH"
-    cd "$PROJECT_DIR"
+    create_archive
 else
     echo "Skipping notarization (credentials not set)"
 fi
 
+PACKAGE_HASH=$(shasum -a 256 "$ZIP_PATH")
+PACKAGE_HASH=${PACKAGE_HASH%% *}
+
+# Publish only after every preparation step succeeds; the two outputs are not an atomic pair.
+rm -rf "$OUTPUT_APP_BUNDLE"
+mv "$APP_BUNDLE" "$OUTPUT_APP_BUNDLE"
+mv -f "$ZIP_PATH" "$OUTPUT_ZIP_PATH"
+
 echo ""
 echo "Done! Outputs:"
-echo "  App:  $APP_BUNDLE"
-echo "  Zip:  $ZIP_PATH"
+echo "  App:  $OUTPUT_APP_BUNDLE"
+echo "  Zip:  $OUTPUT_ZIP_PATH"
 echo ""
-echo "SHA256: $(shasum -a 256 "$ZIP_PATH" | awk '{print $1}')"
+echo "SHA256: $PACKAGE_HASH"
 echo ""
 echo "Note: You'll need to grant Accessibility access in"
 echo "  System Settings > Privacy & Security > Accessibility"

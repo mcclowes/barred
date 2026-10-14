@@ -13,7 +13,17 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Install tools
-        run: brew install swiftformat swiftlint
+        run: brew install swiftformat swiftlint shellcheck
+
+      - name: Check build and release helpers
+        run: |
+          bash -n Scripts/build-app.sh Scripts/test-build-app.sh \
+            Scripts/cask-architectures.sh Scripts/test-cask-architectures.sh \
+            Scripts/bump-version.sh Scripts/test-bump-version.sh Scripts/test-run.sh
+          shellcheck Scripts/build-app.sh Scripts/test-build-app.sh \
+            Scripts/cask-architectures.sh Scripts/test-cask-architectures.sh \
+            Scripts/bump-version.sh Scripts/test-bump-version.sh Scripts/test-run.sh
+          make test-build-helper test-cask-helper test-bump-helper test-run
 
       - name: Lint
         run: make lint

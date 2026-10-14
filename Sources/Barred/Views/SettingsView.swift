@@ -2,26 +2,56 @@ import ServiceManagement
 import SwiftUI
 
 struct SettingsView: View {
-    @Environment(MenuBarController.self) private var controller
+    private enum Section: String, CaseIterable, Identifiable {
+        case menuBarItems
+        case general
+        case about
+
+        var id: Self {
+            self
+        }
+
+        var title: String {
+            switch self {
+            case .menuBarItems: "Menu bar items"
+            case .general: "General"
+            case .about: "About"
+            }
+        }
+
+        var systemImage: String {
+            switch self {
+            case .menuBarItems: "menubar.rectangle"
+            case .general: "gear"
+            case .about: "info.circle"
+            }
+        }
+    }
+
+    @State private var selection: Section? = .menuBarItems
 
     var body: some View {
-        TabView {
-            ItemsSettingsView()
-                .tabItem {
-                    Label("Menu bar items", systemImage: "menubar.rectangle")
-                }
-
-            GeneralSettingsView()
-                .tabItem {
-                    Label("General", systemImage: "gear")
-                }
-
-            AboutView()
-                .tabItem {
-                    Label("About", systemImage: "info.circle")
-                }
+        NavigationSplitView {
+            List(Section.allCases, selection: $selection) { section in
+                Label(section.title, systemImage: section.systemImage)
+                    .tag(section)
+            }
+            .navigationSplitViewColumnWidth(min: 180, ideal: 210, max: 260)
+        } detail: {
+            switch selection ?? .menuBarItems {
+            case .menuBarItems:
+                ItemsSettingsView()
+                    .navigationTitle(Section.menuBarItems.title)
+            case .general:
+                GeneralSettingsView()
+                    .navigationTitle(Section.general.title)
+            case .about:
+                AboutView()
+                    .navigationTitle(Section.about.title)
+            }
         }
-        .frame(minWidth: 500, idealWidth: 500, minHeight: 450, idealHeight: 550)
+        .navigationSplitViewStyle(.balanced)
+        .frame(minWidth: 680, idealWidth: 760, minHeight: 480, idealHeight: 560)
     }
 }
 
