@@ -53,9 +53,14 @@ make run                   # build and run
 make test                  # run tests
 make test-build-helper     # check packaging with stubbed build/signing tools
 make test-bump-helper      # check version bumps with stubbed Git
+make test-run              # check launch paths with stubbed build/launch tools
 ```
 
 See the [Makefile](Makefile) for all available targets.
+
+`make run` uses Debug build settings, preserves paths containing spaces, and stops
+on build or settings lookup failures. `make test-run` checks these behaviors
+without building or launching Barred.
 
 The [command catalog](.clip/commands.md) describes each target's effects,
 including hosted tests that launch the app and packaging that can notarize it.
