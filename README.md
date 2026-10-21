@@ -23,7 +23,9 @@ On first launch, Barred will ask for Accessibility permission. This is required 
 
 **System Settings → Privacy & Security → Accessibility → Barred**
 
-Once granted, Barred appears in your menu bar. Click it to toggle the hidden items bar, or open the settings to configure which items are visible.
+Once granted, Barred appears in your menu bar. Click it to toggle the hidden items bar. **Alt-click (Option-click)** the Barred icon to open its menu, including **Settings...** and **Quit Barred**.
+
+In Settings, turning off **Show Barred bar on click** makes normal clicks open the menu too. Option-click always opens the menu.
 
 ## Features
 

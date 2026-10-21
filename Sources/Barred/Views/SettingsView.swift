@@ -120,6 +120,10 @@ struct GeneralSettingsView: View {
 
             Toggle("Show Barred bar on click", isOn: $controller.preferences.showBarredBarOnClick)
 
+            Text("Option-click the Barred icon to open its menu at any time.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
             HStack {
                 Text("Auto-hide delay")
                 Slider(

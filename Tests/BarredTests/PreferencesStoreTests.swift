@@ -66,6 +66,19 @@ struct PreferencesStoreTests {
 
 @MainActor
 struct AppDelegateTests {
+    @Test("Option-click always opens the menu", arguments: [true, false])
+    func optionClickOpensMenu(showBarredBarOnClick: Bool) {
+        #expect(!AppDelegate.shouldToggleBar(optionHeld: true, showBarredBarOnClick: showBarredBarOnClick))
+    }
+
+    @Test("normal clicks follow the bar visibility preference", arguments: [true, false])
+    func normalClickFollowsPreference(showBarredBarOnClick: Bool) {
+        #expect(
+            AppDelegate.shouldToggleBar(optionHeld: false, showBarredBarOnClick: showBarredBarOnClick)
+                == showBarredBarOnClick
+        )
+    }
+
     @Test("onboarding is presented once for a new install")
     func onboardingIsPresentedOnceForNewInstall() throws {
         let suiteName = "AppDelegateTests.newInstall.\(UUID().uuidString)"

@@ -27,15 +27,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             button.action = #selector(statusItemClicked(_:))
             button.target = self
             button.sendAction(on: [.leftMouseUp])
+            button.toolTip = "Barred: Option-click to open the menu"
         }
 
         popover = NSPopover()
-        popover.contentSize = NSSize(width: 240, height: 200)
         popover.behavior = .transient
-        popover.contentViewController = NSHostingController(
-            rootView: BarredMenuView()
-                .environment(controller)
+        let menuController = NSHostingController(
+            rootView: BarredMenuView(onClose: { [weak self] in
+                self?.popover.performClose(nil)
+            })
+            .environment(controller)
         )
+        menuController.sizingOptions = [.preferredContentSize]
+        popover.contentViewController = menuController
 
         controller.start()
 
@@ -52,9 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let optionHeld = event?.modifierFlags.contains(.option) == true
         let clickTogglesBar = controller.preferences.showBarredBarOnClick
 
-        // Normal click: toggle bar (or popover if showBarredBarOnClick is off)
-        // Option-click: the opposite action
-        let shouldToggleBar = clickTogglesBar != optionHeld
+        let shouldToggleBar = Self.shouldToggleBar(optionHeld: optionHeld, showBarredBarOnClick: clickTogglesBar)
 
         if shouldToggleBar {
             controller.accessibilityService.checkTrust()
@@ -66,6 +68,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             togglePopover(sender)
         }
+    }
+
+    nonisolated static func shouldToggleBar(optionHeld: Bool, showBarredBarOnClick: Bool) -> Bool {
+        showBarredBarOnClick && !optionHeld
     }
 
     private func togglePopover(_ sender: NSStatusBarButton) {

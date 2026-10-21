@@ -19,3 +19,7 @@ skills-lock.json
 .saggar/**/*.local.*
 .saggar/scratchpad.md
 .saggar/jobs/
+
+# Fettle review output
+.fettle/shots/
+.fettle/visual-results.json
