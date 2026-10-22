@@ -63,6 +63,14 @@ final class SectionDivider: SectionDividing {
         return image
     }
 
+    static func setMarkersVisible(_ visible: Bool, markers: [NSStatusItem]) {
+        for marker in markers {
+            marker.length = visible ? collapsedLength : 0
+            marker.button?.image = visible ? makeDividerImage() : nil
+            marker.button?.title = ""
+        }
+    }
+
     /// Compute a safe expanded length that pushes items off-screen without
     /// causing the multi-GB memory leaks seen with excessively large values.
     /// Uses the widest connected screen rather than `NSScreen.main`, which
@@ -152,8 +160,7 @@ final class SectionDivider: SectionDividing {
             guard request == generation else { return false }
             isExpanded = hidden
             if hidden {
-                startItem.button?.image = nil
-                startItem.length = 0
+                Self.setMarkersVisible(false, markers: [startItem, statusItem])
             }
             return hidden
         }
@@ -177,14 +184,8 @@ final class SectionDivider: SectionDividing {
             return
         }
         isExpanded = false
-        startItem?.length = Self.collapsedLength
-        startItem?.button?.image = Self.makeDividerImage()
         Self.logger.debug("Collapsing divider to \(Self.collapsedLength)px")
-        statusItem.length = Self.collapsedLength
-        if let button = statusItem.button {
-            button.title = ""
-            button.image = Self.makeDividerImage()
-        }
+        Self.setMarkersVisible(true, markers: [startItem, statusItem].compactMap(\.self))
     }
 
     var isSectionHidden: Bool {

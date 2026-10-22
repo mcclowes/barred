@@ -5,6 +5,23 @@ import Testing
 
 @MainActor
 struct SectionDividerTests {
+    @Test("both markers are visible only while revealed", arguments: [false, true])
+    func markerVisibility(revealed: Bool) {
+        let markers = (0 ..< 2).map { _ in NSStatusBar.system.statusItem(withLength: 20) }
+        defer { markers.forEach(NSStatusBar.system.removeStatusItem) }
+        for marker in markers {
+            marker.button?.image = SectionDivider.makeDividerImage()
+        }
+        SectionDivider.setMarkersVisible(false, markers: markers)
+        if revealed {
+            SectionDivider.setMarkersVisible(true, markers: markers)
+        }
+        for marker in markers {
+            #expect(marker.length == (revealed ? 20 : 0))
+            #expect((marker.button?.image != nil) == revealed)
+        }
+    }
+
     @Test("divider renders a visible vertical line", .bug("https://github.com/mcclowes/barred/issues/46"))
     func dividerImageIsVisible() throws {
         let image = SectionDivider.makeDividerImage()
