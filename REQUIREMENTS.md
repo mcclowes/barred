@@ -17,7 +17,7 @@ Mac users with cluttered menu bars who want a simple, free, native tool — not 
 ## Core features
 
 ### Hide menu bar items
-Users can hide individual menu bar icons from other apps. Hidden items are pushed off-screen by expanding an invisible divider — the same technique used by Dozer and Hidden Bar.
+Users can hide menu bar icons from other apps. On macOS 26 and earlier, hidden items are pushed off-screen by expanding an invisible divider. On macOS 27, two visible markers bound the hidden section, and native per-app visibility hides only apps in that section. Apps with icons outside either marker and system controls stay visible. A failed or unavailable hiding mechanism leaves the section visible.
 
 ### Collapsible secondary bar
 Hidden items aren't gone — they're accessible with a single click on the Barred icon or the section divider. The secondary bar slides into view, then auto-hides after a configurable delay.

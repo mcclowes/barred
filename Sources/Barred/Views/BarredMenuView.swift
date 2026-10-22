@@ -21,7 +21,7 @@ struct BarredMenuView: View {
 
             VStack(spacing: 2) {
                 Button {
-                    controller.toggleBarredBar()
+                    Task { await controller.toggleBarredBar() }
                     onClose()
                 } label: {
                     menuRow(
@@ -59,8 +59,14 @@ struct BarredMenuView: View {
             .padding(.horizontal, 8)
 
             VStack(alignment: .leading, spacing: 4) {
+                if let error = controller.hidingError {
+                    Text(error)
+                        .foregroundStyle(.orange)
+                }
                 Text("\(controller.detectedItems.count) menu bar items detected")
-                Text("\u{2318}-drag icons across the divider to hide or show them.")
+                Text(SectionDivider.usesBoundedSection
+                    ? "\u{2318}-drag icons between the two lines to hide them."
+                    : "\u{2318}-drag icons across the divider to hide or show them.")
             }
             .font(.caption)
             .foregroundStyle(.secondary)

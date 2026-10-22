@@ -19,6 +19,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        statusItem.autosaveName = "BarredControl"
         if let button = statusItem.button {
             button.image = NSImage(
                 systemSymbolName: "rectangle.topthird.inset.filled",
@@ -64,7 +65,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 Self.logger.info("AXIsProcessTrusted = false, requesting trust")
                 controller.accessibilityService.requestTrust()
             }
-            controller.toggleBarredBar()
+            Task { await controller.toggleBarredBar() }
         } else {
             togglePopover(sender)
         }

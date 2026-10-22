@@ -27,6 +27,10 @@ Once granted, Barred appears in your menu bar. Click it to toggle the hidden ite
 
 In Settings, turning off **Show Barred bar on click** makes normal clicks open the menu too. Option-click always opens the menu.
 
+On macOS 27, run Barred from **Applications**, then click it to reveal two vertical lines. **⌘-drag icons between the lines** to include them in the hidden section. Icons outside either line stay visible. Clicking Barred hides or reveals that section. macOS hides all icons belonging to an app together; if that app also has an icon outside the section, it stays visible. System controls always stay visible.
+
+On macOS 26 and earlier, there is one divider: ⌘-drag icons to its left to hide them.
+
 ## Features
 
 - **Hide menu bar items** — declutter your menu bar by hiding icons you rarely need
@@ -42,7 +46,7 @@ In Settings, turning off **Show Barred bar on click** makes normal clicks open t
 
 ## How it works
 
-Barred uses macOS Accessibility APIs to detect status items from running apps. A divider separates visible items from hidden ones — hidden items are pushed off-screen by expanding the divider. This is the same approach used by [Dozer](https://github.com/Mortennn/Dozer) and [Hidden Bar](https://github.com/dwarvesf/hidden).
+Barred uses macOS Accessibility APIs to detect status items from running apps. On macOS 26 and earlier, it pushes hidden items off-screen by expanding a divider. macOS 27 changed menu bar layout, so Barred instead hides the apps between two section markers through the private `MenuBarClientCore` framework. That API is checked at runtime; if it is unavailable or hiding fails, the section stays visible. Showing the section or quitting releases the visibility restriction.
 
 ## Building from source
 
@@ -58,6 +62,8 @@ make test                  # run tests
 `make run` requires an Apple Development signing identity in your keychain. This gives local builds a stable identity so Accessibility permission survives rebuilds. It defaults to the Codogo team; use `DEV_DEVELOPMENT_TEAM=YOUR_TEAM_ID` and `DEV_CODE_SIGN_IDENTITY="Your signing identity"` to override the team and certificate.
 
 Development and installed release builds need separate initial Accessibility approval. If Barred is already enabled but the development build still requests access, quit Barred, remove its stale entry from **System Settings → Privacy & Security → Accessibility**, then launch `make run` and approve that build once. `make build` and `make test` still use ad-hoc signing and don't require a certificate.
+
+For live hiding tests on macOS 27, install the signed development app in Applications and launch that copy. macOS resolves visibility rules through the registered application; Barred leaves everything visible if a different copy is registered, rather than risking hiding its own controls. `make run` builds and launches the development output but doesn't replace an installed app.
 
 See the [Makefile](Makefile) for all available targets.
 

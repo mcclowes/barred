@@ -12,6 +12,7 @@ struct MenuBarItem: Identifiable {
     let itemIndex: Int
     let axElement: AXUIElement?
     let appIcon: NSImage?
+    var isManagedHidden = false
 
     init(
         pid: pid_t,
@@ -47,6 +48,9 @@ struct MenuBarItem: Identifiable {
     /// gave false positives on multi-monitor layouts where the primary
     /// display isn't at x = 0.
     var isHidden: Bool {
+        if isManagedHidden {
+            return true
+        }
         let screens = NSScreen.screens
         guard !screens.isEmpty else { return frame.origin.x < 0 }
         return !screens.contains { $0.frame.contains(frame.origin) }

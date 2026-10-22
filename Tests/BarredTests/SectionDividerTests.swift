@@ -1,4 +1,5 @@
 import AppKit
+import ApplicationServices
 @testable import Barred
 import Testing
 
@@ -30,9 +31,10 @@ struct SectionDividerTests {
     }
 
     @Test("expand without setUp is a no-op")
-    func expandBeforeSetUp() {
+    func expandBeforeSetUp() async {
         let divider = SectionDivider()
-        divider.expand()
+        let hidden = await divider.expand()
+        #expect(hidden == false)
         #expect(divider.isSectionHidden == false)
     }
 

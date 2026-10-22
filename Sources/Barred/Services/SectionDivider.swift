@@ -5,19 +5,32 @@ import os
 @MainActor
 protocol SectionDividing: AnyObject {
     var isSectionHidden: Bool { get }
+    var hiddenBundleIdentifiers: Set<String> { get }
+    var hidingUnavailableReason: String? { get }
     func setUp(onToggle: @escaping () -> Void)
-    func expand()
+    func expand() async -> Bool
     func collapse()
 }
 
-/// Manages an NSStatusItem that acts as a divider between visible and hidden
-/// sections of the menu bar. Expanding its length pushes everything to its
-/// left off-screen — the same technique used by Dozer and Hidden Bar.
+extension SectionDividing {
+    var hidingUnavailableReason: String? {
+        nil
+    }
+
+    var hiddenBundleIdentifiers: Set<String> {
+        []
+    }
+}
+
+/// Owns the section markers and selects hiding behavior for the running macOS.
 @MainActor
 final class SectionDivider: SectionDividing {
     private static let logger = Logger(subsystem: "com.mcclowes.barred", category: "SectionDivider")
     private var statusItem: NSStatusItem?
+    private var startItem: NSStatusItem?
+    private let nativeVisibility: NativeMenuBarVisibility?
     private var isExpanded = false
+    private var generation = 0
     private var actionTarget: ActionTarget?
     // `nonisolated(unsafe)` because `deinit` is nonisolated in Swift 6 and
     // `NotificationCenter.removeObserver` is thread-safe for valid tokens.
@@ -28,6 +41,15 @@ final class SectionDivider: SectionDividing {
 
     /// The collapsed length, including space around the vertical separator.
     private static let collapsedLength: Double = 20
+
+    static var usesBoundedSection: Bool {
+        ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 27
+    }
+
+    init(accessibilityService: any AccessibilityQuerying = AccessibilityService()) {
+        self.nativeVisibility = Self.usesBoundedSection
+            ? NativeMenuBarVisibility(accessibility: accessibilityService) : nil
+    }
 
     static func makeDividerImage() -> NSImage {
         let size = NSSize(width: 6, height: 16)
@@ -58,6 +80,7 @@ final class SectionDivider: SectionDividing {
     func setUp(onToggle: @escaping () -> Void) {
         guard statusItem == nil else { return }
         let item = NSStatusBar.system.statusItem(withLength: Self.collapsedLength)
+        item.autosaveName = "BarredHiddenSectionEnd"
 
         let target = ActionTarget(action: onToggle)
         actionTarget = target
@@ -71,6 +94,19 @@ final class SectionDivider: SectionDividing {
         }
 
         statusItem = item
+
+        if nativeVisibility != nil {
+            let start = NSStatusBar.system.statusItem(withLength: Self.collapsedLength)
+            start.autosaveName = "BarredHiddenSectionStart"
+            start.button?.image = Self.makeDividerImage()
+            start.button?.target = target
+            start.button?.action = #selector(ActionTarget.performAction)
+            start.button?.toolTip = "Command-drag icons between the two lines to hide them"
+            startItem = start
+        }
+        item.button?.toolTip = nativeVisibility == nil
+            ? "Command-drag icons left of this line to hide them"
+            : "Command-drag icons between the two lines to hide them"
 
         screenChangeObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification,
@@ -92,19 +128,35 @@ final class SectionDivider: SectionDividing {
     }
 
     private func handleScreenChange() {
-        guard isExpanded, let statusItem else { return }
+        guard nativeVisibility == nil, isExpanded, let statusItem else { return }
         let length = expandedLength
         Self.logger.debug("Screen change — re-applying divider length to \(length)px")
         statusItem.length = length
     }
 
-    /// Expand the divider to push items to its left off-screen.
-    func expand() {
+    /// Hide the section using native visibility on macOS 27 or length expansion on older systems.
+    func expand() async -> Bool {
         guard let statusItem else {
             Self.logger.debug("expand() skipped — statusItem is nil (setUp not called yet?)")
-            return
+            return false
         }
-        guard !isExpanded else { return }
+        guard !isExpanded else { return true }
+        generation += 1
+        let request = generation
+        if let nativeVisibility {
+            guard let startItem,
+                  let first = Self.screenFrame(of: startItem),
+                  let second = Self.screenFrame(of: statusItem)
+            else { return false }
+            let hidden = await nativeVisibility.hide(between: first, and: second)
+            guard request == generation else { return false }
+            isExpanded = hidden
+            if hidden {
+                startItem.button?.image = nil
+                startItem.length = 0
+            }
+            return hidden
+        }
         isExpanded = true
         let length = expandedLength
         Self.logger.debug("Expanding divider to \(length)px")
@@ -113,16 +165,20 @@ final class SectionDivider: SectionDividing {
             button.image = nil
             button.title = " "
         }
+        return true
     }
 
     /// Collapse the divider to reveal hidden items.
     func collapse() {
+        generation += 1
+        nativeVisibility?.show()
         guard let statusItem else {
             Self.logger.debug("collapse() skipped — statusItem is nil")
             return
         }
-        guard isExpanded else { return }
         isExpanded = false
+        startItem?.length = Self.collapsedLength
+        startItem?.button?.image = Self.makeDividerImage()
         Self.logger.debug("Collapsing divider to \(Self.collapsedLength)px")
         statusItem.length = Self.collapsedLength
         if let button = statusItem.button {
@@ -133,6 +189,22 @@ final class SectionDivider: SectionDividing {
 
     var isSectionHidden: Bool {
         isExpanded
+    }
+
+    var hiddenBundleIdentifiers: Set<String> {
+        nativeVisibility?.hiddenBundleIdentifiers ?? []
+    }
+
+    var hidingUnavailableReason: String? {
+        nativeVisibility?.unavailableReason
+    }
+
+    private static func screenFrame(of item: NSStatusItem) -> CGRect? {
+        guard let button = item.button, let window = button.window,
+              let primary = NSScreen.screens.first
+        else { return nil }
+        let frame = window.convertToScreen(button.convert(button.bounds, to: nil))
+        return CGRect(x: frame.minX, y: primary.frame.maxY - frame.maxY, width: frame.width, height: frame.height)
     }
 }
 
