@@ -51,9 +51,13 @@ Requires Xcode 16+ and [xcodegen](https://github.com/yonaskolb/XcodeGen).
 ```bash
 make build                 # debug build
 make app                   # build .app bundle
-make run                   # build and run
+make run                   # build and run with Apple Development signing
 make test                  # run tests
 ```
+
+`make run` requires an Apple Development signing identity in your keychain. This gives local builds a stable identity so Accessibility permission survives rebuilds. It defaults to the Codogo team; use `DEV_DEVELOPMENT_TEAM=YOUR_TEAM_ID` and `DEV_CODE_SIGN_IDENTITY="Your signing identity"` to override the team and certificate.
+
+Development and installed release builds need separate initial Accessibility approval. If Barred is already enabled but the development build still requests access, quit Barred, remove its stale entry from **System Settings → Privacy & Security → Accessibility**, then launch `make run` and approve that build once. `make build` and `make test` still use ad-hoc signing and don't require a certificate.
 
 See the [Makefile](Makefile) for all available targets.
 

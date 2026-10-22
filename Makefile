@@ -1,5 +1,7 @@
 SCHEME = Barred
 PROJECT = Barred.xcodeproj
+DEV_CODE_SIGN_IDENTITY ?= Apple Development
+DEV_DEVELOPMENT_TEAM ?= BCB43KG62T
 BUILD_DIR = $(shell xcodebuild -project $(PROJECT) -scheme $(SCHEME) -showBuildSettings 2>/dev/null | grep -m1 'BUILT_PRODUCTS_DIR' | awk '{print $$NF}')
 
 .PHONY: build release app run test format format-check lint clean generate install-hooks bump help
@@ -15,7 +17,10 @@ release: ## Release build
 app: ## Build .app bundle (signed, notarizable)
 	./Scripts/build-app.sh
 
-run: build ## Build and run
+run: ## Build and run with persistent development signing
+	xcodebuild -project "$(PROJECT)" -scheme "$(SCHEME)" -configuration Debug \
+		CODE_SIGN_IDENTITY="$(DEV_CODE_SIGN_IDENTITY)" DEVELOPMENT_TEAM="$(DEV_DEVELOPMENT_TEAM)" \
+		CODE_SIGN_STYLE=Manual build
 	open "$(BUILD_DIR)/Barred.app"
 
 ## Test
