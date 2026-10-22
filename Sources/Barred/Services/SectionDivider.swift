@@ -26,8 +26,20 @@ final class SectionDivider: SectionDividing {
     // swiftlint:disable:next modifier_order
     private nonisolated(unsafe) var screenChangeObserver: NSObjectProtocol?
 
-    /// The collapsed length — a small dot visible as a section separator.
+    /// The collapsed length, including space around the vertical separator.
     private static let collapsedLength: Double = 20
+
+    static func makeDividerImage() -> NSImage {
+        let size = NSSize(width: 6, height: 16)
+        let image = NSImage(size: size, flipped: false) { rect in
+            NSColor.black.setFill()
+            NSBezierPath(roundedRect: rect.insetBy(dx: 2, dy: 1), xRadius: 1, yRadius: 1).fill()
+            return true
+        }
+        image.isTemplate = true
+        image.accessibilityDescription = "Barred section divider"
+        return image
+    }
 
     /// Compute a safe expanded length that pushes items off-screen without
     /// causing the multi-GB memory leaks seen with excessively large values.
@@ -51,11 +63,7 @@ final class SectionDivider: SectionDividing {
         actionTarget = target
 
         if let button = item.button {
-            button.image = NSImage(
-                systemSymbolName: "line.vertical",
-                accessibilityDescription: "Barred section divider"
-            )
-            button.image?.size = NSSize(width: 6, height: 16)
+            button.image = Self.makeDividerImage()
             button.imagePosition = .imageOnly
             button.target = target
             button.action = #selector(ActionTarget.performAction)
@@ -119,11 +127,7 @@ final class SectionDivider: SectionDividing {
         statusItem.length = Self.collapsedLength
         if let button = statusItem.button {
             button.title = ""
-            button.image = NSImage(
-                systemSymbolName: "line.vertical",
-                accessibilityDescription: "Barred section divider"
-            )
-            button.image?.size = NSSize(width: 6, height: 16)
+            button.image = Self.makeDividerImage()
         }
     }
 
