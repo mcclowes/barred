@@ -5,6 +5,7 @@ unset VERSION BUILD_NUMBER
 
 barred_test_source="$(cd "$(dirname "$0")/.." && pwd)"
 barred_test_temp=$(mktemp -d "${TMPDIR:-/tmp}/barred-build-helper.XXXXXX")
+barred_test_temp=$(cd "$barred_test_temp" && pwd -P)
 trap 'rm -rf "$barred_test_temp"' EXIT
 
 fail() { echo "$1" >&2; exit 1; }
@@ -433,7 +434,7 @@ for failure in app zip both; do
     [ "$barred_status" = 55 ] || fail 'Rollback failure replaced the original status'
     staging=$(find "$barred_fixture/.build" -maxdepth 1 -type d -name '.barred-package.*' -print)
     [ -n "$staging" ] && [ -d "$staging" ] || fail 'Rollback failure lost recovery staging'
-    grep -F "$staging" "$barred_fixture/output" >/dev/null || fail 'Recovery path was not reported'
+    grep -F "$staging" "$barred_fixture/output" >/dev/null || { cat "$barred_fixture/output" >&2; fail "Recovery path was not reported for $staging"; }
     grep -q '^restore-app$' "$barred_fixture/moves" || fail 'App restore was not attempted'
     grep -q '^restore-zip$' "$barred_fixture/moves" || fail 'ZIP restore was not attempted independently'
     if [ "$failure" = app ] || [ "$failure" = both ]; then
