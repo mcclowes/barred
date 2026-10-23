@@ -19,17 +19,24 @@ Download `Barred.zip` from the [latest release](https://github.com/mcclowes/barr
 
 ## Getting started
 
-On first launch, Barred will ask for Accessibility permission. This is required to detect and manage menu bar items from other apps.
+Barred needs Accessibility permission to detect and manage menu bar items from other apps. Option-click its menu bar icon and choose **Grant accessibility access...** to request it, then enable Barred in:
 
 **System Settings → Privacy & Security → Accessibility → Barred**
 
-Once granted, Barred appears in your menu bar. Click it to toggle the hidden items bar. **Alt-click (Option-click)** the Barred icon to open its menu, including **Settings...** and **Quit Barred**.
+By default, click the Barred icon to toggle the hidden section. **Alt-click (Option-click)** it to open the menu, including **Settings...** and **Quit Barred**.
 
-In Settings, turning off **Show Barred bar on click** makes normal clicks open the menu too. Option-click always opens the menu.
+In **Settings → General**, **Show Barred bar on click** controls normal clicks. Option-click always opens the menu:
+
+| Show Barred bar on click | Click | Option-click |
+| --- | --- | --- |
+| On (default) | Toggle the hidden section | Open the menu |
+| Off | Open the menu | Open the menu |
 
 On macOS 27, run Barred from **Applications**, then click it to reveal two vertical lines. **⌘-drag icons between the lines** to include them in the hidden section. Icons outside either line stay visible. Clicking Barred hides or reveals that section. macOS hides all icons belonging to an app together; if that app also has an icon outside the section, it stays visible. System controls always stay visible.
 
 On macOS 26 and earlier, there is one divider: ⌘-drag icons to its left to hide them.
+
+Click a divider while it is visible to toggle the section. After revealing the section, Barred hides it again after five seconds of inactivity by default. The idle timer resets while you drag an item, keep the pointer in the menu bar, or hover over a menu bar dropdown. Change **Auto-hide delay** in **Settings → General** from 1 to 15 seconds.
 
 ## Features
 
