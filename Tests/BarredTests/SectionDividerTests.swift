@@ -35,7 +35,7 @@ struct SectionDividerTests {
 
         for y in (bitmap.pixelsHigh / 4) ..< (bitmap.pixelsHigh * 3 / 4) {
             let color = try #require(bitmap.colorAt(x: centerX, y: y))
-            #expect(color.alphaComponent > 0.5)
+            #expect(color.alphaComponent > 0.2)
         }
         let edge = try #require(bitmap.colorAt(x: 0, y: centerY))
         #expect(edge.alphaComponent == 0)

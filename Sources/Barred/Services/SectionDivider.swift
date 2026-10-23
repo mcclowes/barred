@@ -57,8 +57,9 @@ final class SectionDivider: SectionDividing {
     static func makeDividerImage() -> NSImage {
         let size = NSSize(width: 6, height: 16)
         let image = NSImage(size: size, flipped: false) { rect in
-            NSColor.black.setFill()
-            NSBezierPath(roundedRect: rect.insetBy(dx: 2, dy: 1), xRadius: 1, yRadius: 1).fill()
+            NSColor.black.withAlphaComponent(0.55).setFill()
+            let line = NSRect(x: rect.midX - 0.5, y: rect.midY - 5, width: 1, height: 10)
+            NSBezierPath(roundedRect: line, xRadius: 0.5, yRadius: 0.5).fill()
             return true
         }
         image.isTemplate = true
