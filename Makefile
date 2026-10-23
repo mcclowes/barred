@@ -2,14 +2,13 @@ SCHEME = Barred
 PROJECT = Barred.xcodeproj
 DEV_CODE_SIGN_IDENTITY ?= Apple Development
 DEV_DEVELOPMENT_TEAM ?= BCB43KG62T
-BUILD_DIR = $(shell xcodebuild -project $(PROJECT) -scheme $(SCHEME) -showBuildSettings 2>/dev/null | grep -m1 'BUILT_PRODUCTS_DIR' | awk '{print $$NF}')
 
-.PHONY: build release app run test format format-check lint clean generate install-hooks bump help
+.PHONY: build release app run test test-build-helper test-cask-helper test-bump-helper test-run test-release-paths format format-check lint clean generate install-hooks bump help
 
 ## Build
 
 build: ## Debug build
-	xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration Debug build
+	xcodebuild -project "$(PROJECT)" -scheme "$(SCHEME)" -configuration Debug build
 
 release: ## Release build
 	xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration Release build
@@ -21,12 +20,30 @@ run: ## Build and run with persistent development signing
 	xcodebuild -project "$(PROJECT)" -scheme "$(SCHEME)" -configuration Debug \
 		CODE_SIGN_IDENTITY="$(DEV_CODE_SIGN_IDENTITY)" DEVELOPMENT_TEAM="$(DEV_DEVELOPMENT_TEAM)" \
 		CODE_SIGN_STYLE=Manual build
-	open "$(BUILD_DIR)/Barred.app"
+	@BUILD_SETTINGS=$$(xcodebuild -project "$(PROJECT)" -scheme "$(SCHEME)" -configuration Debug -showBuildSettings) || exit $$?; \
+	BUILT_DIR=$$(printf '%s\n' "$$BUILD_SETTINGS" | awk '/^[[:space:]]*BUILT_PRODUCTS_DIR[[:space:]]*=/ { sub(/^[[:space:]]*BUILT_PRODUCTS_DIR[[:space:]]*=[[:space:]]*/, ""); print; exit }'); \
+	test -n "$$BUILT_DIR" || { echo 'Xcode did not report a build products directory.' >&2; exit 1; }; \
+	open "$$BUILT_DIR/Barred.app"
 
 ## Test
 
 test: ## Run tests
 	xcodebuild -project $(PROJECT) -scheme BarredTests -configuration Debug test
+
+test-build-helper: ## Check build helper with stubbed signing tools
+	bash Scripts/test-build-app.sh
+
+test-cask-helper: ## Check release architecture metadata with a stubbed inspector
+	bash Scripts/test-cask-architectures.sh
+
+test-bump-helper: ## Check version helper arguments with stubbed Git
+	bash Scripts/test-bump-version.sh
+
+test-run: ## Check launch paths with stubbed build and launch tools
+	bash Scripts/test-run.sh
+
+test-release-paths: ## Check release settings lookups with fake Xcode
+	bash Scripts/test-release-paths.sh
 
 ## Lint & format
 
