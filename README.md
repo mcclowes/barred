@@ -22,7 +22,13 @@ On first launch, Barred will ask for Accessibility permission. This is required 
 
 **System Settings → Privacy & Security → Accessibility → Barred**
 
-Once granted, Barred appears in your menu bar. Click it to toggle the hidden items bar, or open the settings to configure which items are visible.
+Once granted, Barred appears in your menu bar. Click it to toggle the hidden items bar. **Alt-click (Option-click)** the Barred icon to open its menu, including **Settings...** and **Quit Barred**.
+
+In Settings, turning off **Show Barred bar on click** makes normal clicks open the menu too. Option-click always opens the menu.
+
+On macOS 27, run Barred from **Applications**, then click it to reveal two vertical lines. **⌘-drag icons between the lines** to include them in the hidden section. Icons outside either line stay visible. Clicking Barred hides or reveals that section. macOS hides all icons belonging to an app together; if that app also has an icon outside the section, it stays visible. System controls always stay visible.
+
+On macOS 26 and earlier, there is one divider: ⌘-drag icons to its left to hide them.
 
 ## Features
 
@@ -40,7 +46,7 @@ Once granted, Barred appears in your menu bar. Click it to toggle the hidden ite
 
 ## How it works
 
-Barred uses macOS Accessibility APIs to detect status items from running apps. A divider separates visible items from hidden ones — hidden items are pushed off-screen by expanding the divider. This is the same approach used by [Dozer](https://github.com/Mortennn/Dozer) and [Hidden Bar](https://github.com/dwarvesf/hidden).
+Barred uses macOS Accessibility APIs to detect status items from running apps. On macOS 26 and earlier, it pushes hidden items off-screen by expanding a divider. macOS 27 changed menu bar layout, so Barred instead hides the apps between two section markers through the private `MenuBarClientCore` framework. That API is checked at runtime; if it is unavailable or hiding fails, the section stays visible. Showing the section or quitting releases the visibility restriction.
 
 ## Building from source
 
@@ -49,13 +55,21 @@ Requires Xcode 16+ and [xcodegen](https://github.com/yonaskolb/XcodeGen).
 ```bash
 make build                 # debug build
 make app                   # build .app bundle
-make run                   # build and run
+make run                   # build and run with Apple Development signing
 make test                  # run tests
 make test-build-helper     # check packaging with stubbed build/signing tools
 make test-bump-helper      # check version bumps with stubbed Git
 make test-run              # check launch paths with stubbed build/launch tools
 make test-release-paths    # check release path lookups with fake Xcode
 ```
+
+`make run` requires an Apple Development signing identity in your keychain. This gives local builds a stable identity so Accessibility permission survives rebuilds. It defaults to the Codogo team; use `DEV_DEVELOPMENT_TEAM=YOUR_TEAM_ID` and `DEV_CODE_SIGN_IDENTITY="Your signing identity"` to override the team and certificate.
+
+Development and installed release builds need separate initial Accessibility approval. If Barred is already enabled but the development build still requests access, quit Barred, remove its stale entry from **System Settings → Privacy & Security → Accessibility**, then launch `make run` and approve that build once. `make build` and `make test` still use ad-hoc signing and don't require a certificate.
+
+For live hiding tests on macOS 27, install the signed development app in Applications and launch that copy. macOS resolves visibility rules through the registered application; Barred leaves everything visible if a different copy is registered, rather than risking hiding its own controls. `make run` builds and launches the development output but doesn't replace an installed app.
+
+To check the native layout race, quit Barred and run `open /Applications/Barred.app --args --verify-menu-bar-layout` with a Debug build and at least one app between the markers. This runs twelve show/hide cycles with immediate, 50 ms, 100 ms, and 150 ms toggles, then quits and restores the icons. `/private/tmp/barred-layout-check.json` reports `completedCycles: 12` and `passed: true` only when every cycle successfully selects the same nonempty group. This checks selection stability; rendered visibility still needs a visual check. Relaunch Barred normally afterward.
 
 See the [Makefile](Makefile) for all available targets.
 

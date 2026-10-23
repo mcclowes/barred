@@ -92,6 +92,12 @@ These cannot be moved even with Cmd+drag:
 
 ## macOS version considerations
 
+### macOS 27
+
+Local reproduction on macOS 27.0.1 confirms that expanding a divider to 5,000 points leaves the item on its left on-screen. The old length technique no longer provides hiding. [Hidden Bar's macOS 27 implementation](https://github.com/dwarvesf/hidden/blob/develop/hidden/Features/StatusBar/Engine/NativeVisibilityEngine.swift) uses an allow-list assertion from the private `MenuBarClientCore` framework instead.
+
+Barred resolves that framework at runtime on macOS 27 and uses two markers to identify a bounded hidden section. It preserves system controls, Barred itself, and apps outside the section. Visibility is per app, so an app with any icon outside the section stays visible. The assertion is released on show, failure, cancellation, or process exit. Older macOS versions retain length-based hiding. The private API may change in a future macOS update; an unavailable API leaves the section visible.
+
 ### Sonoma (macOS 14)
 Stable baseline. Ice targets macOS 14+ as minimum.
 

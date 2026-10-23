@@ -1,8 +1,46 @@
+import AppKit
+import ApplicationServices
 @testable import Barred
 import Testing
 
 @MainActor
 struct SectionDividerTests {
+    @Test("both markers are visible only while revealed", arguments: [false, true])
+    func markerVisibility(revealed: Bool) {
+        let markers = (0 ..< 2).map { _ in NSStatusBar.system.statusItem(withLength: 20) }
+        defer { markers.forEach(NSStatusBar.system.removeStatusItem) }
+        for marker in markers {
+            marker.button?.image = SectionDivider.makeDividerImage()
+        }
+        SectionDivider.setMarkersVisible(false, markers: markers)
+        if revealed {
+            SectionDivider.setMarkersVisible(true, markers: markers)
+        }
+        for marker in markers {
+            #expect(marker.length == (revealed ? 20 : 0))
+            #expect((marker.button?.image != nil) == revealed)
+        }
+    }
+
+    @Test("divider renders a visible vertical line", .bug("https://github.com/mcclowes/barred/issues/46"))
+    func dividerImageIsVisible() throws {
+        let image = SectionDivider.makeDividerImage()
+        #expect(image.isTemplate)
+        #expect(image.accessibilityDescription == "Barred section divider")
+        var rect = NSRect(origin: .zero, size: image.size)
+        let cgImage = try #require(image.cgImage(forProposedRect: &rect, context: nil, hints: nil))
+        let bitmap = NSBitmapImageRep(cgImage: cgImage)
+        let centerX = bitmap.pixelsWide / 2
+        let centerY = bitmap.pixelsHigh / 2
+
+        for y in (bitmap.pixelsHigh / 4) ..< (bitmap.pixelsHigh * 3 / 4) {
+            let color = try #require(bitmap.colorAt(x: centerX, y: y))
+            #expect(color.alphaComponent > 0.5)
+        }
+        let edge = try #require(bitmap.colorAt(x: 0, y: centerY))
+        #expect(edge.alphaComponent == 0)
+    }
+
     @Test("initially not hidden")
     func initialState() {
         let divider = SectionDivider()
@@ -10,9 +48,10 @@ struct SectionDividerTests {
     }
 
     @Test("expand without setUp is a no-op")
-    func expandBeforeSetUp() {
+    func expandBeforeSetUp() async {
         let divider = SectionDivider()
-        divider.expand()
+        let hidden = await divider.expand()
+        #expect(hidden == false)
         #expect(divider.isSectionHidden == false)
     }
 

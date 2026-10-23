@@ -97,7 +97,9 @@ struct ItemsSettingsView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(
                         "Drag items in this list to rearrange them, or \u{2318}-drag icons directly in the menu bar. " +
-                            "Items to the left of the Barred divider (|) will be hidden."
+                            (SectionDivider.usesBoundedSection
+                                ? "Items between the two Barred dividers (| |) will be hidden."
+                                : "Items to the left of the Barred divider (|) will be hidden.")
                     )
                     .font(.callout)
                     .foregroundStyle(.secondary)
@@ -149,6 +151,10 @@ struct GeneralSettingsView: View {
             LaunchAtLoginToggle("Launch at login")
 
             Toggle("Show Barred bar on click", isOn: $controller.preferences.showBarredBarOnClick)
+
+            Text("Option-click the Barred icon to open its menu at any time.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
 
             HStack {
                 Text("Auto-hide delay")

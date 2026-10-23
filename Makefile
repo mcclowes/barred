@@ -1,5 +1,7 @@
 SCHEME = Barred
 PROJECT = Barred.xcodeproj
+DEV_CODE_SIGN_IDENTITY ?= Apple Development
+DEV_DEVELOPMENT_TEAM ?= BCB43KG62T
 
 .PHONY: build release app run test test-build-helper test-cask-helper test-bump-helper test-run test-release-paths format format-check lint clean generate install-hooks bump help
 
@@ -14,9 +16,12 @@ release: ## Release build
 app: ## Build .app bundle (signed, notarizable)
 	./Scripts/build-app.sh
 
-run: build ## Build and run
+run: ## Build and run with persistent development signing
+	xcodebuild -project "$(PROJECT)" -scheme "$(SCHEME)" -configuration Debug \
+		CODE_SIGN_IDENTITY="$(DEV_CODE_SIGN_IDENTITY)" DEVELOPMENT_TEAM="$(DEV_DEVELOPMENT_TEAM)" \
+		CODE_SIGN_STYLE=Manual build
 	@BUILD_SETTINGS=$$(xcodebuild -project "$(PROJECT)" -scheme "$(SCHEME)" -configuration Debug -showBuildSettings) || exit $$?; \
-	BUILT_DIR=$$(printf '%s\n' "$$BUILD_SETTINGS" | awk '/^[[:space:]]*BUILT_PRODUCTS_DIR = / { sub(/^[[:space:]]*BUILT_PRODUCTS_DIR = /, ""); print; exit }'); \
+	BUILT_DIR=$$(printf '%s\n' "$$BUILD_SETTINGS" | awk '/^[[:space:]]*BUILT_PRODUCTS_DIR[[:space:]]*=/ { sub(/^[[:space:]]*BUILT_PRODUCTS_DIR[[:space:]]*=[[:space:]]*/, ""); print; exit }'); \
 	test -n "$$BUILT_DIR" || { echo 'Xcode did not report a build products directory.' >&2; exit 1; }; \
 	open "$$BUILT_DIR/Barred.app"
 

@@ -4,6 +4,11 @@ import Foundation
 import Testing
 
 @MainActor
+private final class MockPreferencesStore: PreferencesStoring {
+    var preferences = UserPreferences()
+}
+
+@MainActor
 private final class MockAccessibilityService: AccessibilityQuerying {
     var isTrusted = true
     func checkTrust() {}
@@ -38,14 +43,17 @@ private final class MockSectionDivider: SectionDividing {
     var setUpCalled = false
     var expandCallCount = 0
     var collapseCallCount = 0
+    var canHide = true
+    var hiddenBundleIdentifiers = Set<String>()
 
     func setUp(onToggle _: @escaping () -> Void) {
         setUpCalled = true
     }
 
-    func expand() {
+    func expand() async -> Bool {
         expandCallCount += 1
-        isSectionHidden = true
+        isSectionHidden = canHide
+        return canHide
     }
 
     func collapse() {
@@ -99,7 +107,7 @@ struct MenuBarControllerTests {
         autoHideDelay: TimeInterval? = nil,
         idleTickInterval: Duration = .milliseconds(200)
     ) -> TestHarness {
-        let prefsStore = PreferencesStore()
+        let prefsStore = MockPreferencesStore()
         if let autoHideDelay {
             prefsStore.preferences.autoHideDelay = autoHideDelay
         }
@@ -145,23 +153,33 @@ struct MenuBarControllerTests {
     }
 
     @Test("toggleBarredBar flips visibility")
-    func toggle() {
+    func toggle() async {
         let harness = makeController()
-        harness.controller.toggleBarredBar()
+        await harness.controller.toggleBarredBar()
         #expect(harness.controller.isBarredBarVisible == true)
-        harness.controller.toggleBarredBar()
+        await harness.controller.toggleBarredBar()
         #expect(harness.controller.isBarredBarVisible == false)
     }
 
     @Test("toggle expands divider when hiding, collapses when showing")
-    func toggleDividerBehaviour() {
+    func toggleDividerBehaviour() async {
         let harness = makeController()
 
-        harness.controller.toggleBarredBar() // show
+        await harness.controller.toggleBarredBar() // show
         #expect(harness.divider.collapseCallCount == 1)
 
-        harness.controller.toggleBarredBar() // hide
+        await harness.controller.toggleBarredBar() // hide
         #expect(harness.divider.expandCallCount == 1)
+    }
+
+    @Test("failed hiding keeps the section visible and reports the failure")
+    func failedHidingStaysVisible() async {
+        let harness = makeController()
+        harness.divider.canHide = false
+        await harness.controller.toggleBarredBar()
+        await harness.controller.toggleBarredBar()
+        #expect(harness.controller.isBarredBarVisible)
+        #expect(harness.controller.hidingError != nil)
     }
 
     @Test("start sets up the section divider and begins scanning")
@@ -191,6 +209,16 @@ struct MenuBarControllerTests {
     func detectedItemsDelegation() {
         let harness = makeController()
         #expect(harness.controller.detectedItems.isEmpty)
+    }
+
+    @Test("native hidden apps remain classified as hidden even with on-screen AX frames")
+    func nativeHiddenItems() {
+        let harness = makeController()
+        harness.detector.detectedItems = [makeItem(id: "inside", x: 100)]
+        harness.divider.hiddenBundleIdentifiers = ["com.test.inside"]
+        #expect(harness.controller.detectedItems.first?.isHidden == true)
+        harness.divider.hiddenBundleIdentifiers = []
+        #expect(harness.controller.detectedItems.first?.isManagedHidden == false)
     }
 
     // MARK: - moveItem
@@ -290,7 +318,7 @@ struct MenuBarControllerTests {
             idleTickInterval: .milliseconds(20)
         )
         harness.cursorMonitor.inStrip = false
-        harness.controller.toggleBarredBar()
+        await harness.controller.toggleBarredBar()
         #expect(harness.controller.isBarredBarVisible == true)
 
         try await Task.sleep(for: .milliseconds(400))
@@ -306,7 +334,7 @@ struct MenuBarControllerTests {
             idleTickInterval: .milliseconds(20)
         )
         harness.cursorMonitor.inStrip = true
-        harness.controller.toggleBarredBar()
+        await harness.controller.toggleBarredBar()
         #expect(harness.controller.isBarredBarVisible == true)
 
         try await Task.sleep(for: .milliseconds(400))
@@ -325,7 +353,7 @@ struct MenuBarControllerTests {
         // over the popup window — the section must stay revealed.
         harness.cursorMonitor.inStrip = false
         harness.cursorMonitor.overPopup = true
-        harness.controller.toggleBarredBar()
+        await harness.controller.toggleBarredBar()
         #expect(harness.controller.isBarredBarVisible == true)
 
         try await Task.sleep(for: .milliseconds(400))
@@ -341,7 +369,7 @@ struct MenuBarControllerTests {
             idleTickInterval: .milliseconds(20)
         )
         harness.cursorMonitor.inStrip = true
-        harness.controller.toggleBarredBar()
+        await harness.controller.toggleBarredBar()
 
         try await Task.sleep(for: .milliseconds(250))
         #expect(harness.controller.isBarredBarVisible == true)
@@ -357,8 +385,8 @@ struct MenuBarControllerTests {
             autoHideDelay: 0.1,
             idleTickInterval: .milliseconds(20)
         )
-        harness.controller.toggleBarredBar() // show
-        harness.controller.toggleBarredBar() // hide immediately
+        await harness.controller.toggleBarredBar() // show
+        await harness.controller.toggleBarredBar() // hide immediately
 
         try await Task.sleep(for: .milliseconds(300))
 

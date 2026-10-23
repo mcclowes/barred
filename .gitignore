@@ -14,3 +14,12 @@ Package.resolved
 # Claude Code skills
 .agents/
 skills-lock.json
+
+# Saggar local state
+.saggar/**/*.local.*
+.saggar/scratchpad.md
+.saggar/jobs/
+
+# Fettle review output
+.fettle/shots/
+.fettle/visual-results.json

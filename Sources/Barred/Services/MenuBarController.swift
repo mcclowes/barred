@@ -13,11 +13,18 @@ final class MenuBarController {
     let cursorMonitor: CursorMonitoring
     private(set) var isBarredBarVisible = false
     private(set) var isMovingItem = false
+    private(set) var hidingError: String?
     private var autoHideTask: Task<Void, Never>?
+    private var visibilityGeneration = 0
     private let idleTickInterval: Duration
 
     var detectedItems: [MenuBarItem] {
-        detector.detectedItems
+        let hiddenBundles = sectionDivider.hiddenBundleIdentifiers
+        return detector.detectedItems.map { detected in
+            var item = detected
+            item.isManagedHidden = item.bundleIdentifier.map(hiddenBundles.contains) ?? false
+            return item
+        }
     }
 
     var preferences: UserPreferences {
@@ -29,14 +36,14 @@ final class MenuBarController {
         accessibilityService: AccessibilityQuerying = AccessibilityService(),
         detector: MenuBarDetecting? = nil,
         preferencesStore: PreferencesStoring = PreferencesStore(),
-        sectionDivider: SectionDividing = SectionDivider(),
+        sectionDivider: SectionDividing? = nil,
         itemMover: MenuBarItemMoving = MenuBarItemMover(),
         cursorMonitor: CursorMonitoring = CursorMonitor(),
         idleTickInterval: Duration = .milliseconds(200)
     ) {
         self.accessibilityService = accessibilityService
         self.preferencesStore = preferencesStore
-        self.sectionDivider = sectionDivider
+        self.sectionDivider = sectionDivider ?? SectionDivider(accessibilityService: accessibilityService)
         self.itemMover = itemMover
         self.cursorMonitor = cursorMonitor
         self.idleTickInterval = idleTickInterval
@@ -49,29 +56,32 @@ final class MenuBarController {
         detector.startScanning()
 
         sectionDivider.setUp { [weak self] in
-            self?.toggleBarredBar()
+            Task { await self?.toggleBarredBar() }
         }
 
+        let initialGeneration = visibilityGeneration
         Task {
             await detector.waitForFirstScan()
-            hideSection()
+            guard initialGeneration == visibilityGeneration else { return }
+            await hideSection()
         }
     }
 
-    func toggleBarredBar() {
-        isBarredBarVisible.toggle()
-        Self.logger.debug("toggleBarredBar → isBarredBarVisible=\(self.isBarredBarVisible)")
-
-        if isBarredBarVisible {
+    func toggleBarredBar() async {
+        if !isBarredBarVisible {
+            visibilityGeneration += 1
+            isBarredBarVisible = true
+            hidingError = nil
             showSection()
             scheduleAutoHide()
         } else {
             cancelAutoHide()
-            hideSection()
+            await hideSection()
         }
     }
 
     func restoreAll() {
+        visibilityGeneration += 1
         cancelAutoHide()
         detector.stopScanning()
         sectionDivider.collapse()
@@ -150,8 +160,15 @@ final class MenuBarController {
 
     // MARK: - Private
 
-    private func hideSection() {
-        sectionDivider.expand()
+    private func hideSection() async {
+        visibilityGeneration += 1
+        let request = visibilityGeneration
+        isBarredBarVisible = false
+        let hidden = await sectionDivider.expand()
+        guard request == visibilityGeneration else { return }
+        isBarredBarVisible = !hidden
+        hidingError = hidden ? nil : sectionDivider.hidingUnavailableReason
+            ?? "Barred couldn’t hide this section. Check Accessibility access and try again."
     }
 
     private func showSection() {
@@ -165,8 +182,7 @@ final class MenuBarController {
         autoHideTask = Task { [weak self] in
             await self?.runIdleCountdown(delay: delay, tick: tick)
             guard let self, !Task.isCancelled, isBarredBarVisible else { return }
-            isBarredBarVisible = false
-            hideSection()
+            await hideSection()
         }
     }
 

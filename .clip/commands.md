@@ -10,7 +10,7 @@ tools, without launching Barred or submitting a notarization request.
 - Packaging helper tests: `make test-build-helper` - checks metadata, signing arguments, preparation failures, promotion rollback, handled signals, recovery backups, and dummy notarization with isolated fixtures #quick #safe #ci
 - Cask helper tests: `make test-cask-helper` - checks release architecture detection with a stubbed inspector #quick #safe #ci
 - Version helper tests: `make test-bump-helper` - checks argument rejection and valid bumps with isolated metadata and stubbed Git #quick #safe #ci
-- Launch helper tests: `make test-run` - checks Debug launch paths and failure handling with stubbed build and launch tools #quick #safe #ci
+- Launch helper tests: `make test-run` - checks development signing arguments, Debug launch paths, and failure handling with stubbed build and launch tools #quick #safe #ci
 - Release paths: `make test-release-paths` - checks both release settings lookups with fake Xcode #quick #safe #ci
 - Shell syntax: `for script in Scripts/*.sh; do bash -n "$script"; done` #quick #safe #ci
 - Shell lint: `shellcheck Scripts/build-app.sh Scripts/test-build-app.sh Scripts/cask-architectures.sh Scripts/test-cask-architectures.sh Scripts/bump-version.sh Scripts/test-bump-version.sh Scripts/test-run.sh Scripts/test-release-paths.sh` #quick #safe #ci
@@ -29,7 +29,7 @@ App launch can request Accessibility access and rearrange menu bar items.
 - Debug build: `make build` #safe #slow
 - Release build: `make release` #safe #slow
 - Native tests: `make test` - launches the app test host and runs Swift Testing #writes #slow #ci
-- Build and launch: `make run` - opens Barred.app on the current desktop #writes #interactive #slow
+- Build and launch: `make run` - builds with development signing and opens Barred.app on the current desktop #writes #interactive #slow
 
 ## Source and local setup
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+unset MAKEFLAGS MFLAGS MAKEOVERRIDES DEV_CODE_SIGN_IDENTITY DEV_DEVELOPMENT_TEAM
 
 barred_test_source="$(cd "$(dirname "$0")/.." && pwd)"
 barred_test_temp=$(mktemp -d "${TMPDIR:-/tmp}/barred-run.XXXXXX")
@@ -10,13 +11,14 @@ export BARRED_RUN_TEST_LAUNCH="$barred_test_temp/launch"
 export BARRED_RUN_TEST_MODE=''
 export BARRED_RUN_TEST_PROJECT=Barred.xcodeproj
 export BARRED_RUN_TEST_SCHEME=Barred
+export BARRED_RUN_TEST_IDENTITY="Apple Development"
+export BARRED_RUN_TEST_TEAM=BCB43KG62T
 mkdir -p "$barred_test_project" "$barred_test_temp/bin"
 cp "$barred_test_source/Makefile" "$barred_test_project/Makefile"
 
 cat > "$barred_test_temp/bin/xcodebuild" <<'STUB'
 #!/usr/bin/env bash
 set -eu
-test "$#" -eq 7
 test "$1" = -project
 test "$2" = "$BARRED_RUN_TEST_PROJECT"
 test "$3" = -scheme
@@ -25,6 +27,7 @@ test "$5" = -configuration
 test "$6" = Debug
 for argument in "$@"; do
     if [ "$argument" = -showBuildSettings ]; then
+        test "$#" -eq 7
         if [ "$BARRED_RUN_TEST_MODE" = missing-directory ]; then
             printf '    PRODUCT_NAME = Barred\n'
             exit 0
@@ -39,7 +42,11 @@ for argument in "$@"; do
         exit 0
     fi
 done
-test "$7" = build
+test "$#" -eq 10 || { echo 'Expected development signing arguments for launch build' >&2; exit 32; }
+test "$7" = "CODE_SIGN_IDENTITY=$BARRED_RUN_TEST_IDENTITY"
+test "$8" = "DEVELOPMENT_TEAM=$BARRED_RUN_TEST_TEAM"
+test "$9" = CODE_SIGN_STYLE=Manual
+test "${10}" = build
 if [ "$BARRED_RUN_TEST_MODE" = build-failure ]; then
     exit 41
 fi
@@ -53,7 +60,7 @@ STUB
 chmod +x "$barred_test_temp/bin/xcodebuild" "$barred_test_temp/bin/open"
 export PATH="$barred_test_temp/bin:$PATH"
 
-make -s -C "$barred_test_project" run > "$barred_test_temp/run.log" 2>&1
+make -s -C "$barred_test_project" run > "$barred_test_temp/run.log" 2>&1 || { cat "$barred_test_temp/run.log" >&2; exit 1; }
 if [ "$(cat "$BARRED_RUN_TEST_LAUNCH")" != "$BARRED_RUN_TEST_OUTPUT/Barred.app" ]; then
     echo 'make run did not pass the complete app path to open.' >&2
     cat "$BARRED_RUN_TEST_LAUNCH" >&2
@@ -90,4 +97,11 @@ if ! make -s -C "$barred_test_project" run "PROJECT=$BARRED_RUN_TEST_PROJECT" \
     exit 1
 fi
 test "$(cat "$BARRED_RUN_TEST_LAUNCH")" = "$BARRED_RUN_TEST_OUTPUT/Barred.app"
-echo 'Passed 6 launch helper scenarios; no real builds or app launch ran.'
+export BARRED_RUN_TEST_IDENTITY='Apple Development: Fixture Identity (TESTTEAM)'
+export BARRED_RUN_TEST_TEAM=TESTTEAM
+make -s -C "$barred_test_project" run "PROJECT=$BARRED_RUN_TEST_PROJECT" \
+    "SCHEME=$BARRED_RUN_TEST_SCHEME" "DEV_CODE_SIGN_IDENTITY=$BARRED_RUN_TEST_IDENTITY" \
+    "DEV_DEVELOPMENT_TEAM=$BARRED_RUN_TEST_TEAM" > "$barred_test_temp/run.log" 2>&1 || \
+    { cat "$barred_test_temp/run.log" >&2; exit 1; }
+test "$(cat "$BARRED_RUN_TEST_LAUNCH")" = "$BARRED_RUN_TEST_OUTPUT/Barred.app"
+echo 'Passed 7 launch helper scenarios; signing arguments, builds, and app launch used fixtures.'
