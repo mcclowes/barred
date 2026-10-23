@@ -65,6 +65,8 @@ Development and installed release builds need separate initial Accessibility app
 
 For live hiding tests on macOS 27, install the signed development app in Applications and launch that copy. macOS resolves visibility rules through the registered application; Barred leaves everything visible if a different copy is registered, rather than risking hiding its own controls. `make run` builds and launches the development output but doesn't replace an installed app.
 
+To check the native layout race, quit Barred and run `open /Applications/Barred.app --args --verify-menu-bar-layout` with a Debug build and at least one app between the markers. This runs twelve show/hide cycles with immediate, 50 ms, 100 ms, and 150 ms toggles, then quits and restores the icons. `/private/tmp/barred-layout-check.json` reports `completedCycles: 12` and `passed: true` only when every cycle successfully selects the same nonempty group. This checks selection stability; rendered visibility still needs a visual check. Relaunch Barred normally afterward.
+
 See the [Makefile](Makefile) for all available targets.
 
 ## License

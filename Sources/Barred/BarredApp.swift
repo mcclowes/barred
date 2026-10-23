@@ -42,6 +42,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menuController.sizingOptions = [.preferredContentSize]
         popover.contentViewController = menuController
 
+        #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--verify-menu-bar-layout") {
+                Task { await runSectionDiagnostic() }
+                return
+            }
+        #endif
         controller.start()
 
         if Self.shouldPresentOnboarding() {
@@ -74,6 +80,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     nonisolated static func shouldToggleBar(optionHeld: Bool, showBarredBarOnClick: Bool) -> Bool {
         showBarredBarOnClick && !optionHeld
     }
+
+    #if DEBUG
+        private func runSectionDiagnostic() async {
+            guard let divider = controller.sectionDivider as? SectionDivider else { return }
+            divider.setUp(onToggle: {})
+            var snapshots = [[String: Any]]()
+            var expected: Set<String>?
+            var passed = true
+            for cycle in 0 ..< 12 {
+                divider.collapse()
+                if cycle % 4 > 0 {
+                    try? await Task.sleep(for: .milliseconds((cycle % 4) * 50))
+                }
+                snapshots.append(divider.diagnosticSnapshot(label: "revealed-\(cycle)"))
+                let success = await divider.expand()
+                try? await Task.sleep(for: .milliseconds(300))
+                var snapshot = divider.diagnosticSnapshot(label: "hidden-\(cycle)")
+                snapshot["success"] = success
+                snapshots.append(snapshot)
+                let selected = divider.hiddenBundleIdentifiers
+                if expected == nil {
+                    expected = selected
+                }
+                passed = passed && success && !selected.isEmpty && selected == expected
+                let report: [String: Any] = ["passed": passed, "completedCycles": cycle + 1, "snapshots": snapshots]
+                if let data = try? JSONSerialization.data(
+                    withJSONObject: report,
+                    options: [.prettyPrinted, .sortedKeys]
+                ) {
+                    try? data.write(to: URL(fileURLWithPath: "/private/tmp/barred-layout-check.json"), options: .atomic)
+                }
+            }
+            divider.collapse()
+            NSApp.terminate(nil)
+        }
+    #endif
 
     private func togglePopover(_ sender: NSStatusBarButton) {
         if popover.isShown {

@@ -41,6 +41,9 @@ final class SectionDivider: SectionDividing {
 
     /// The collapsed length, including space around the vertical separator.
     private static let collapsedLength: Double = 20
+    private static let layoutSampleInterval: Duration = .milliseconds(100)
+    private static let requiredStableLayoutSamples = 3
+    private static let maximumLayoutSamples = 20
 
     static var usesBoundedSection: Bool {
         ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 27
@@ -153,8 +156,8 @@ final class SectionDivider: SectionDividing {
         let request = generation
         if let nativeVisibility {
             guard let startItem,
-                  let first = Self.screenFrame(of: startItem),
-                  let second = Self.screenFrame(of: statusItem)
+                  let (first, second) = await settledMarkerFrames(request: request),
+                  request == generation
             else { return false }
             let hidden = await nativeVisibility.hide(between: first, and: second)
             guard request == generation else { return false }
@@ -173,6 +176,40 @@ final class SectionDivider: SectionDividing {
             button.title = " "
         }
         return true
+    }
+
+    private func settledMarkerFrames(request: Int) async -> (CGRect, CGRect)? {
+        var previous: [CGRect] = []
+        var stableSamples = 0
+        // Restoring the assertion and marker widths reflows asynchronously. Reading
+        // immediately can select a different section on every rapid toggle.
+        for _ in 0 ..< Self.maximumLayoutSamples {
+            do {
+                try await Task.sleep(for: Self.layoutSampleInterval)
+            } catch {
+                return nil
+            }
+            guard request == generation, let startItem, let statusItem,
+                  let first = Self.screenFrame(of: startItem),
+                  let second = Self.screenFrame(of: statusItem)
+            else { return nil }
+            let frames = [first, second]
+            let left = first.midX < second.midX ? first : second
+            let right = first.midX < second.midX ? second : first
+            guard left.width > 0, right.width > 0, left.maxX <= right.minX,
+                  left.minY == right.minY
+            else {
+                previous = []
+                stableSamples = 0
+                continue
+            }
+            stableSamples = frames == previous ? stableSamples + 1 : 1
+            if stableSamples >= Self.requiredStableLayoutSamples {
+                return (first, second)
+            }
+            previous = frames
+        }
+        return nil
     }
 
     /// Collapse the divider to reveal hidden items.
@@ -207,6 +244,22 @@ final class SectionDivider: SectionDividing {
         let frame = window.convertToScreen(button.convert(button.bounds, to: nil))
         return CGRect(x: frame.minX, y: primary.frame.maxY - frame.maxY, width: frame.width, height: frame.height)
     }
+
+    #if DEBUG
+        func diagnosticSnapshot(label: String) -> [String: Any] {
+            func rect(_ frame: CGRect?) -> [Double] {
+                guard let frame else { return [] }
+                return [frame.minX, frame.minY, frame.width, frame.height]
+            }
+            return [
+                "label": label,
+                "start": rect(startItem.flatMap(Self.screenFrame)),
+                "end": rect(statusItem.flatMap(Self.screenFrame)),
+                "hidden": hiddenBundleIdentifiers.sorted(),
+                "error": hidingUnavailableReason ?? ""
+            ]
+        }
+    #endif
 }
 
 private class ActionTarget: NSObject {
