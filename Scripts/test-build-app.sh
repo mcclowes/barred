@@ -146,6 +146,33 @@ if [ "${HASH_STATUS:-0}" -ne 0 ]; then
 fi
 exec /usr/bin/shasum "$@"
 STUB
+    cat > "$barred_fixture/bin/mv" <<'STUB'
+#!/bin/bash
+set -eu
+args=("$@")
+if [ "${1:-}" = -f ]; then shift; fi
+case "${1##*/}:${2##*/}" in
+    Barred.app:previous-Barred.app) phase=backup-app ;;
+    Barred.zip:previous-Barred.zip) phase=backup-zip ;;
+    previous-Barred.app:Barred.app) phase=restore-app ;;
+    previous-Barred.zip:Barred.zip) phase=restore-zip ;;
+    Barred.app:Barred.app) phase=promote-app ;;
+    Barred.zip:Barred.zip) phase=promote-zip ;;
+    *) phase=other ;;
+esac
+printf '%s\n' "$phase" >> "$MOVE_LOG"
+if [ "${MOVE_FAILURE_PHASE:-}" = "$phase" ]; then exit "${MOVE_FAILURE_STATUS:-54}"; fi
+case "$phase:${FAIL_RESTORE:-}" in
+    restore-app:app|restore-app:both) exit 61 ;;
+    restore-zip:zip|restore-zip:both) exit 62 ;;
+esac
+if [ "${MOVE_SIGNAL_AT:-}" = "before-$phase" ]; then
+    kill -s "${MOVE_SIGNAL:-TERM}" "$PPID"
+    exit 0
+fi
+/bin/mv "${args[@]}"
+if [ "${MOVE_SIGNAL_AT:-}" = "after-$phase" ]; then kill -s "${MOVE_SIGNAL:-TERM}" "$PPID"; fi
+STUB
     chmod +x "$barred_fixture/bin/"*
 }
 
@@ -153,7 +180,7 @@ run_helper() {
     local identity="$1" keychain="$2" verification="$3"
     shift 3
     if env PATH="$barred_fixture/bin:/usr/bin:/bin" BASH_ENV=/dev/null \
-        HELPER_LOG="$barred_fixture/calls" EXPECTED_KEYCHAIN="$keychain" \
+        HELPER_LOG="$barred_fixture/calls" MOVE_LOG="$barred_fixture/moves" EXPECTED_KEYCHAIN="$keychain" \
         EXPECTED_IDENTITY="${identity:--}" VERIFY_STATUS="$verification" \
         CODESIGN_IDENTITY="$identity" KEYCHAIN_PATH="$keychain" \
         DEVELOPER_ID_APPLICATION='' APPLE_ID='' APPLE_ID_PASSWORD='' APPLE_TEAM_ID='' \
@@ -301,4 +328,139 @@ run_helper 'Fixture Identity' '' 0
 [ "$barred_status" -ne 0 ] || fail 'ZIP directory destination was accepted'
 [ "$(cat "$barred_fixture/.build/Barred.zip/sentinel")" = preserve-directory ] || fail 'ZIP directory destination changed'
 [ "$(cat "$barred_fixture/.build/Barred.app/previous-artifact")" = previous ] || fail 'ZIP directory rejection changed the previous app'
-echo 'Passed 26 build-helper scenarios; no real builds, signing, notarization, or keychain access ran.'
+
+snapshot_artifact() {
+    local artifact=$1 path relative hash
+    if [ -L "$artifact" ]; then printf 'link . %s\n' "$(readlink "$artifact")"; return; fi
+    if [ ! -e "$artifact" ]; then printf 'missing\n'; return; fi
+    while IFS= read -r path; do
+        relative=${path#"$artifact"}
+        relative=${relative:-.}
+        if [ -L "$path" ]; then
+            printf 'link %s %s\n' "$relative" "$(readlink "$path")"
+        elif [ -d "$path" ]; then
+            printf 'directory %s %s\n' "$relative" "$(stat -f '%Lp' "$path")"
+        else
+            hash=$(/usr/bin/shasum -a 256 "$path")
+            printf 'file %s %s %s\n' "$relative" "$(stat -f '%Lp' "$path")" "${hash%% *}"
+        fi
+    done < <(find "$artifact" -print | LC_ALL=C sort)
+}
+
+promotion_fixture() {
+    local shape=$1 name
+    new_fixture
+    mkdir -p "$barred_fixture/.build"
+    if [ "$shape" = both ] || [ "$shape" = app ] || [ "$shape" = links ]; then
+        mkdir -p "$barred_fixture/.build/Barred.app/Contents/Resources"
+        printf 'Previous app' > "$barred_fixture/.build/Barred.app/previous-artifact"
+        printf 'Previous resource' > "$barred_fixture/.build/Barred.app/Contents/Resources/payload"
+        chmod 750 "$barred_fixture/.build/Barred.app"
+        chmod 600 "$barred_fixture/.build/Barred.app/Contents/Resources/payload"
+        ln -s payload "$barred_fixture/.build/Barred.app/Contents/Resources/resource link"
+    fi
+    if [ "$shape" = both ] || [ "$shape" = zip ] || [ "$shape" = links ]; then
+        printf 'Previous ZIP bytes' > "$barred_fixture/.build/Barred.zip"
+        chmod 640 "$barred_fixture/.build/Barred.zip"
+    fi
+    if [ "$shape" = links ]; then
+        /bin/mv "$barred_fixture/.build/Barred.app" "$barred_fixture/.build/original-app"
+        /bin/mv "$barred_fixture/.build/Barred.zip" "$barred_fixture/.build/original-zip"
+        ln -s original-app "$barred_fixture/.build/Barred.app"
+        ln -s original-zip "$barred_fixture/.build/Barred.zip"
+    elif [ "$shape" = dangling ]; then
+        ln -s missing-app "$barred_fixture/.build/Barred.app"
+        ln -s missing-zip "$barred_fixture/.build/Barred.zip"
+    fi
+    printf 'Neighbor data' > "$barred_fixture/.build/neighbor"
+    chmod 600 "$barred_fixture/.build/neighbor"
+    for name in Barred.app Barred.zip neighbor original-app original-zip missing-app missing-zip; do
+        snapshot_artifact "$barred_fixture/.build/$name" > "$barred_fixture/before-$name"
+    done
+}
+
+assert_artifact() {
+    local name=$1 path=${2:-$barred_fixture/.build/$1}
+    snapshot_artifact "$path" > "$barred_fixture/after-$name"
+    cmp -s "$barred_fixture/before-$name" "$barred_fixture/after-$name" || fail "Previous $name contents/modes/links were not restored"
+}
+
+assert_rollback() {
+    local expected_status=$1 name
+    [ "$barred_status" = "$expected_status" ] || fail "Promotion returned $barred_status instead of $expected_status"
+    for name in Barred.app Barred.zip neighbor original-app original-zip missing-app missing-zip; do assert_artifact "$name"; done
+    [ -z "$(find "$barred_fixture/.build" -maxdepth 1 -name '.barred-package.*' -print)" ] || fail 'Successful rollback left staging behind'
+    ! grep -q 'Done! Outputs:' "$barred_fixture/output" || fail 'Failed promotion printed success'
+}
+
+barred_build_cases=26
+for shape in both none app zip; do
+    for phase in promote-app promote-zip; do
+        promotion_fixture "$shape"
+        if [ "$phase" = promote-app ]; then expected_status=54; else expected_status=55; fi
+        run_helper 'Fixture Identity' '' 0 MOVE_FAILURE_PHASE="$phase" MOVE_FAILURE_STATUS="$expected_status"
+        assert_rollback "$expected_status"
+        barred_build_cases=$((barred_build_cases + 1))
+    done
+done
+for phase in backup-app backup-zip; do
+    promotion_fixture both
+    run_helper 'Fixture Identity' '' 0 MOVE_FAILURE_PHASE="$phase" MOVE_FAILURE_STATUS=56
+    assert_rollback 56
+    barred_build_cases=$((barred_build_cases + 1))
+done
+for event in after-backup-app after-backup-zip before-promote-app before-promote-zip after-promote-app after-promote-zip; do
+    promotion_fixture both
+    run_helper 'Fixture Identity' '' 0 MOVE_SIGNAL_AT="$event" MOVE_SIGNAL=TERM
+    assert_rollback 143
+    barred_build_cases=$((barred_build_cases + 1))
+done
+for signal in INT HUP; do
+    promotion_fixture both
+    run_helper 'Fixture Identity' '' 0 MOVE_SIGNAL_AT=after-promote-app MOVE_SIGNAL="$signal"
+    if [ "$signal" = INT ]; then expected_status=130; else expected_status=129; fi
+    assert_rollback "$expected_status"
+    barred_build_cases=$((barred_build_cases + 1))
+done
+promotion_fixture none
+run_helper 'Fixture Identity' '' 0 MOVE_SIGNAL_AT=after-promote-app MOVE_SIGNAL=TERM
+assert_rollback 143
+barred_build_cases=$((barred_build_cases + 1))
+
+for failure in app zip both; do
+    promotion_fixture both
+    run_helper 'Fixture Identity' '' 0 MOVE_FAILURE_PHASE=promote-zip MOVE_FAILURE_STATUS=55 FAIL_RESTORE="$failure"
+    [ "$barred_status" = 55 ] || fail 'Rollback failure replaced the original status'
+    staging=$(find "$barred_fixture/.build" -maxdepth 1 -type d -name '.barred-package.*' -print)
+    [ -n "$staging" ] && [ -d "$staging" ] || fail 'Rollback failure lost recovery staging'
+    grep -F "$staging" "$barred_fixture/output" >/dev/null || fail 'Recovery path was not reported'
+    grep -q '^restore-app$' "$barred_fixture/moves" || fail 'App restore was not attempted'
+    grep -q '^restore-zip$' "$barred_fixture/moves" || fail 'ZIP restore was not attempted independently'
+    if [ "$failure" = app ] || [ "$failure" = both ]; then
+        assert_artifact Barred.app "$staging/previous-Barred.app"
+    else
+        assert_artifact Barred.app
+    fi
+    if [ "$failure" = zip ] || [ "$failure" = both ]; then
+        assert_artifact Barred.zip "$staging/previous-Barred.zip"
+    else
+        assert_artifact Barred.zip
+    fi
+    assert_artifact neighbor
+    ! grep -q 'Done! Outputs:' "$barred_fixture/output" || fail 'Rollback failure printed success'
+    barred_build_cases=$((barred_build_cases + 1))
+done
+for shape in links dangling; do
+    promotion_fixture "$shape"
+    run_helper 'Fixture Identity' '' 0 MOVE_FAILURE_PHASE=promote-zip MOVE_FAILURE_STATUS=55
+    assert_rollback 55
+    barred_build_cases=$((barred_build_cases + 1))
+done
+promotion_fixture both
+run_helper 'Fixture Identity' '' 0
+[ "$barred_status" = 0 ] || fail 'Successful publication failed'
+[ ! -e "$barred_fixture/.build/Barred.app/previous-artifact" ] || fail 'Successful publication retained obsolete content'
+assert_artifact neighbor
+[ -z "$(find "$barred_fixture/.build" -maxdepth 1 -name '.barred-package.*' -print)" ] || fail 'Success retained backups/staging'
+barred_build_cases=$((barred_build_cases + 1))
+echo "Passed $barred_build_cases build-helper scenarios; native tools were stubbed and promotion used disposable artifacts."

@@ -38,8 +38,51 @@ if [ -d "$OUTPUT_ZIP_PATH" ]; then
     echo 'The ZIP destination is a directory.' >&2
     exit 1
 fi
+path_exists() {
+    [ -e "$1" ] || [ -L "$1" ]
+}
+
+restore_artifact() {
+    local destination="$1" backup="$2" promotion_started="$3"
+    if path_exists "$backup"; then
+        if ! rm -rf "$destination" || ! mv -f "$backup" "$destination"; then
+            echo "Could not restore previous artifact: $destination" >&2
+            return 1
+        fi
+    elif [ "$promotion_started" -eq 1 ]; then
+        if ! rm -rf "$destination"; then
+            echo "Could not remove incomplete artifact: $destination" >&2
+            return 1
+        fi
+    fi
+    return 0
+}
+
+cleanup_package() {
+    local original_status=$? restore_failed=0
+    trap - EXIT
+    trap '' HUP INT TERM
+    set +e
+    if [ "$original_status" -ne 0 ] && [ "$PACKAGE_PROMOTION_STARTED" -eq 1 ]; then
+        restore_artifact "$OUTPUT_APP_BUNDLE" "$PREVIOUS_APP_BUNDLE" "$APP_PROMOTION_STARTED" || restore_failed=1
+        restore_artifact "$OUTPUT_ZIP_PATH" "$PREVIOUS_ZIP_PATH" "$ZIP_PROMOTION_STARTED" || restore_failed=1
+    fi
+    if [ "$restore_failed" -ne 0 ]; then
+        echo "Packaging recovery files retained at: $PACKAGE_STAGING" >&2
+    elif ! rm -rf "$PACKAGE_STAGING"; then
+        echo "Could not remove packaging staging: $PACKAGE_STAGING" >&2
+    fi
+    exit "$original_status"
+}
+
+PACKAGE_PROMOTION_STARTED=0
+APP_PROMOTION_STARTED=0
+ZIP_PROMOTION_STARTED=0
 PACKAGE_STAGING=$(mktemp -d "$BUILD_DIR/.barred-package.XXXXXX")
-trap 'rm -rf "$PACKAGE_STAGING"' EXIT
+PREVIOUS_APP_BUNDLE="$PACKAGE_STAGING/previous-$APP_NAME.app"
+PREVIOUS_ZIP_PATH="$PACKAGE_STAGING/previous-$APP_NAME.zip"
+trap cleanup_package EXIT
+trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 APP_BUNDLE="$PACKAGE_STAGING/$APP_NAME.app"
@@ -133,9 +176,17 @@ fi
 PACKAGE_HASH=$(shasum -a 256 "$ZIP_PATH")
 PACKAGE_HASH=${PACKAGE_HASH%% *}
 
-# Publish only after every preparation step succeeds; the two outputs are not an atomic pair.
-rm -rf "$OUTPUT_APP_BUNDLE"
+# Keep recoverable originals until both replacements have been published.
+PACKAGE_PROMOTION_STARTED=1
+if path_exists "$OUTPUT_APP_BUNDLE"; then
+    mv "$OUTPUT_APP_BUNDLE" "$PREVIOUS_APP_BUNDLE"
+fi
+if path_exists "$OUTPUT_ZIP_PATH"; then
+    mv "$OUTPUT_ZIP_PATH" "$PREVIOUS_ZIP_PATH"
+fi
+APP_PROMOTION_STARTED=1
 mv "$APP_BUNDLE" "$OUTPUT_APP_BUNDLE"
+ZIP_PROMOTION_STARTED=1
 mv -f "$ZIP_PATH" "$OUTPUT_ZIP_PATH"
 
 echo ""

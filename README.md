@@ -69,8 +69,11 @@ including hosted tests that launch the app and packaging that can notarize it.
 
 The helper prepares and signs the app in temporary staging, validates the ZIP,
 and computes its checksum before replacing the normal outputs. Preparation
-failures keep the previous app and ZIP intact and remove staging. App and ZIP
-publication uses separate replacement operations.
+failures keep the previous app and ZIP intact and remove staging. Before
+publication, the helper backs up existing outputs in staging. Failed moves or
+handled HUP, INT, or TERM signals restore them; a failed restore retains staging
+and reports its recovery path. App and ZIP publication uses separate moves, so
+this recovery does not make the pair atomic against a crash or forced termination.
 
 Maintainers: see the [Homebrew release guide](docs/homebrew-release.md) for signing credentials, version bumps, and publishing.
 
