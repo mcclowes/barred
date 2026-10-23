@@ -68,7 +68,9 @@ jobs:
           APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          BUILD_DIR=$(xcodebuild -project Barred.xcodeproj -scheme Barred -configuration Release -showBuildSettings 2>/dev/null | grep -m1 'BUILT_PRODUCTS_DIR' | awk '{print $NF}')
+          BUILD_SETTINGS=$(xcodebuild -project Barred.xcodeproj -scheme Barred -configuration Release -showBuildSettings) || exit $?
+          BUILD_DIR=$(awk '/^[[:space:]]*BUILT_PRODUCTS_DIR[[:space:]]*=/ { sub(/^[[:space:]]*BUILT_PRODUCTS_DIR[[:space:]]*=[[:space:]]*/, ""); print; exit }' <<< "$BUILD_SETTINGS")
+          test -n "$BUILD_DIR" || { echo 'Xcode did not report a build products directory.' >&2; exit 1; }
           APP_PATH="$BUILD_DIR/Barred.app"
 
           ditto -c -k --keepParent "$APP_PATH" "$BUILD_DIR/Barred.zip"
@@ -99,7 +101,9 @@ jobs:
       - name: Find artifact
         id: artifact
         run: |
-          BUILD_DIR=$(xcodebuild -project Barred.xcodeproj -scheme Barred -configuration Release -showBuildSettings 2>/dev/null | grep -m1 'BUILT_PRODUCTS_DIR' | awk '{print $NF}')
+          BUILD_SETTINGS=$(xcodebuild -project Barred.xcodeproj -scheme Barred -configuration Release -showBuildSettings) || exit $?
+          BUILD_DIR=$(awk '/^[[:space:]]*BUILT_PRODUCTS_DIR[[:space:]]*=/ { sub(/^[[:space:]]*BUILT_PRODUCTS_DIR[[:space:]]*=[[:space:]]*/, ""); print; exit }' <<< "$BUILD_SETTINGS")
+          test -n "$BUILD_DIR" || { echo 'Xcode did not report a build products directory.' >&2; exit 1; }
           cask_arches=$(bash Scripts/cask-architectures.sh "${BUILD_DIR}/Barred.app/Contents/MacOS/Barred")
           {
             echo "zip_path=${BUILD_DIR}/Barred.zip"

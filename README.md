@@ -54,6 +54,7 @@ make test                  # run tests
 make test-build-helper     # check packaging with stubbed build/signing tools
 make test-bump-helper      # check version bumps with stubbed Git
 make test-run              # check launch paths with stubbed build/launch tools
+make test-release-paths    # check release path lookups with fake Xcode
 ```
 
 See the [Makefile](Makefile) for all available targets.
