@@ -1,3 +1,4 @@
+import AppKit
 @testable import Barred
 import Foundation
 import Testing
@@ -66,6 +67,18 @@ struct PreferencesStoreTests {
 
 @MainActor
 struct AppDelegateTests {
+    @Test(
+        "quick menu has a usable size before its first presentation",
+        .bug("https://github.com/mcclowes/barred/issues/50")
+    )
+    func quickMenuHasInitialSize() throws {
+        let popover = AppDelegate.makeMenuPopover(controller: MenuBarController())
+        let content = try #require(popover.contentViewController)
+        #expect(popover.contentSize.width > 0)
+        #expect(popover.contentSize.height > 0)
+        #expect(popover.contentSize.height >= content.view.fittingSize.height)
+    }
+
     @Test("Option-click always opens the menu", arguments: [true, false])
     func optionClickOpensMenu(showBarredBarOnClick: Bool) {
         #expect(!AppDelegate.shouldToggleBar(optionHeld: true, showBarredBarOnClick: showBarredBarOnClick))

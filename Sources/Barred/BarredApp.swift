@@ -31,16 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             button.toolTip = "Barred: Option-click to open the menu"
         }
 
-        popover = NSPopover()
-        popover.behavior = .transient
-        let menuController = NSHostingController(
-            rootView: BarredMenuView(onClose: { [weak self] in
-                self?.popover.performClose(nil)
-            })
-            .environment(controller)
-        )
-        menuController.sizingOptions = [.preferredContentSize]
-        popover.contentViewController = menuController
+        popover = Self.makeMenuPopover(controller: controller)
 
         #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("--verify-menu-bar-layout") {
@@ -56,6 +47,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 NSApp.activate(ignoringOtherApps: true)
             }
         }
+    }
+
+    static func makeMenuPopover(controller: MenuBarController) -> NSPopover {
+        let popover = NSPopover()
+        popover.behavior = .transient
+        let menuController = NSHostingController(
+            rootView: BarredMenuView(onClose: { [weak popover] in
+                popover?.performClose(nil)
+            })
+            .environment(controller)
+        )
+        menuController.sizingOptions = [.preferredContentSize]
+        popover.contentViewController = menuController
+        popover.contentSize = menuController.view.fittingSize
+        return popover
     }
 
     @objc private func statusItemClicked(_ sender: NSStatusBarButton) {
