@@ -9,8 +9,7 @@ A lightweight macOS menu bar manager. Hide, reorder, and organise your menu bar 
 **Homebrew (recommended):**
 
 ```bash
-brew tap mcclowes/barred
-brew install --cask barred
+brew install --cask mcclowes/barred/barred
 ```
 
 **Manual:**
@@ -50,6 +49,7 @@ Click a divider while it is visible to toggle the section. After revealing the s
 ## Requirements
 
 - macOS 14 (Sonoma) or later
+- Apple silicon Mac for the current release download (v1.1.4)
 
 ## How it works
 
@@ -64,6 +64,10 @@ make build                 # debug build
 make app                   # build .app bundle
 make run                   # build and run with Apple Development signing
 make test                  # run tests
+make test-build-helper     # check packaging with stubbed build/signing tools
+make test-bump-helper      # check version bumps with stubbed Git
+make test-run              # check launch paths with stubbed build/launch tools
+make test-release-paths    # check release path lookups with fake Xcode
 ```
 
 `make run` requires an Apple Development signing identity in your keychain. This gives local builds a stable identity so Accessibility permission survives rebuilds. It defaults to the Codogo team; use `DEV_DEVELOPMENT_TEAM=YOUR_TEAM_ID` and `DEV_CODE_SIGN_IDENTITY="Your signing identity"` to override the team and certificate.
@@ -75,6 +79,25 @@ For live hiding tests on macOS 27, install the signed development app in Applica
 To check the native layout race, quit Barred and run `open /Applications/Barred.app --args --verify-menu-bar-layout` with a Debug build and at least one app between the markers. This runs twelve show/hide cycles with immediate, 50 ms, 100 ms, and 150 ms toggles, then quits and restores the icons. `/private/tmp/barred-layout-check.json` reports `completedCycles: 12` and `passed: true` only when every cycle successfully selects the same nonempty group. This checks selection stability; rendered visibility still needs a visual check. Relaunch Barred normally afterward.
 
 See the [Makefile](Makefile) for all available targets.
+
+`make run` uses Debug build settings, preserves paths containing spaces, and stops
+on build or settings lookup failures. `make test-run` checks these behaviors
+without building or launching Barred.
+
+The [command catalog](.clip/commands.md) describes each target's effects,
+including hosted tests that launch the app and packaging that can notarize it.
+
+`make app` preserves Xcode's built version, build number, and resolved app metadata. Set `VERSION` or `BUILD_NUMBER` to override only that value for packaging.
+
+The helper prepares and signs the app in temporary staging, validates the ZIP,
+and computes its checksum before replacing the normal outputs. Preparation
+failures keep the previous app and ZIP intact and remove staging. Before
+publication, the helper backs up existing outputs in staging. Failed moves or
+handled HUP, INT, or TERM signals restore them; a failed restore retains staging
+and reports its recovery path. App and ZIP publication uses separate moves, so
+this recovery does not make the pair atomic against a crash or forced termination.
+
+Maintainers: see the [Homebrew release guide](docs/homebrew-release.md) for signing credentials, version bumps, and publishing.
 
 ## License
 

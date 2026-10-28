@@ -13,7 +13,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install tools
-        run: brew install swiftformat swiftlint
+        run: brew install swiftformat swiftlint shellcheck
+
+      - name: Check build and release helpers
+        run: |
+          for script in Scripts/*.sh; do bash -n "$script"; done
+          shellcheck Scripts/*.sh
+          make test-build-helper test-cask-helper test-bump-helper test-run test-release-paths
 
       - name: Lint
         run: make lint
