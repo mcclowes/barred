@@ -4,6 +4,19 @@
 
 A lightweight macOS menu bar manager. Hide, reorder, and organise your menu bar icons — tuck the ones you don't need into a collapsible secondary bar.
 
+## Related repos and prerequisites
+
+**This repo:** Native macOS menu bar manager.
+
+**Account prerequisite:** No Marginal Utility account is required for local use.
+
+| Related repository | Relationship |
+| --- | --- |
+| [homebrew-barred](https://github.com/mcclowes/homebrew-barred) | Homebrew distribution; app/CLI source lives here. |
+| [marginal-utility](https://github.com/mcclowes/marginal-utility) | Hosts the product marketing page and documentation. |
+
+See the [project reference](https://github.com/mcclowes/marginal-utility/blob/main/ECOSYSTEM.md) for the full repository map. Some source repositories require access; public product homes and Homebrew taps remain the entry points for downloads and support.
+
 ## Install
 
 **Homebrew (recommended):**
