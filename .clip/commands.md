@@ -12,8 +12,8 @@ tools, without launching Barred or submitting a notarization request.
 - Version helper tests: `make test-bump-helper` - checks argument rejection and valid bumps with isolated metadata and stubbed Git #quick #safe #ci
 - Launch helper tests: `make test-run` - checks development signing arguments, Debug launch paths, and failure handling with stubbed build and launch tools #quick #safe #ci
 - Release paths: `make test-release-paths` - checks both release settings lookups with fake Xcode #quick #safe #ci
-- Shell syntax: `for script in Scripts/*.sh; do bash -n "$script"; done` #quick #safe #ci
-- Shell lint: `shellcheck Scripts/build-app.sh Scripts/test-build-app.sh Scripts/cask-architectures.sh Scripts/test-cask-architectures.sh Scripts/bump-version.sh Scripts/test-bump-version.sh Scripts/test-run.sh Scripts/test-release-paths.sh` #quick #safe #ci
+- Shell syntax: `for script in Scripts/*.sh; do bash -n "$script" || exit; done` #quick #safe #ci
+- Shell lint: `shellcheck Scripts/*.sh` #quick #safe #ci
 - Swift format check: `make format-check` - checks formatting without changing source #quick #safe
 - Swift lint: `make lint` #quick #safe #ci
 - Catalog check: `clip commands check --strict` - checks decorators and Makefile coverage #quick #safe
