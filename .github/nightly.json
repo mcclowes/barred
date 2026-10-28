@@ -1,0 +1,32 @@
+{
+  "channel": "homebrew",
+  "inputs": [
+    "Sources",
+    "Tests",
+    "Package.swift",
+    "Package.resolved",
+    "package.json",
+    "package-lock.json",
+    "Scripts",
+    ".github",
+    "Vendor",
+    "ThirdParty",
+    ".swiftformat",
+    ".swiftlint.yml",
+    ".saggar-kit-ref",
+    "Fixtures",
+    "Barred",
+    "project.yml",
+    "Makefile",
+    "Resources"
+  ],
+  "managedVersion": true,
+  "recipes": [
+    {
+      "kind": "cask",
+      "stable": "barred",
+      "nightly": "barred@nightly",
+      "artifact": ".build/Barred-*.zip"
+    }
+  ]
+}
