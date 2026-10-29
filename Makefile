@@ -11,7 +11,7 @@ build: ## Debug build
 	xcodebuild -project "$(PROJECT)" -scheme "$(SCHEME)" -configuration Debug build
 
 release: ## Release build
-	xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration Release build
+	xcodebuild -project "$(PROJECT)" -scheme "$(SCHEME)" -configuration Release build
 
 app: ## Build .app bundle (signed, notarizable)
 	./Scripts/build-app.sh
@@ -28,7 +28,7 @@ run: ## Build and run with persistent development signing
 ## Test
 
 test: ## Run tests
-	xcodebuild -project $(PROJECT) -scheme BarredTests -configuration Debug test
+	xcodebuild -project "$(PROJECT)" -scheme BarredTests -configuration Debug test
 
 test-build-helper: ## Check build helper with stubbed signing tools
 	bash Scripts/test-build-app.sh
@@ -39,7 +39,7 @@ test-cask-helper: ## Check release architecture metadata with a stubbed inspecto
 test-bump-helper: ## Check version helper arguments with stubbed Git
 	bash Scripts/test-bump-version.sh
 
-test-run: ## Check launch paths with stubbed build and launch tools
+test-run: ## Check Xcode arguments and launch paths with stubs
 	bash Scripts/test-run.sh
 
 test-release-paths: ## Check release settings lookups with fake Xcode
@@ -90,7 +90,7 @@ generate: ## Regenerate Xcode project from project.yml
 	xcodegen generate
 
 clean: ## Remove build artifacts
-	xcodebuild -project $(PROJECT) -scheme $(SCHEME) clean
+	xcodebuild -project "$(PROJECT)" -scheme "$(SCHEME)" clean
 	rm -rf .build/Barred.app .build/Barred.zip
 
 help: ## Show available targets

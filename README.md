@@ -79,7 +79,7 @@ make run                   # build and run with Apple Development signing
 make test                  # run tests
 make test-build-helper     # check packaging with stubbed build/signing tools
 make test-bump-helper      # check version bumps with stubbed Git
-make test-run              # check launch paths with stubbed build/launch tools
+make test-run              # check Make arguments and launch paths with stubs
 make test-release-paths    # check release path lookups with fake Xcode
 ```
 
@@ -94,8 +94,11 @@ To check the native layout race, quit Barred and run `open /Applications/Barred.
 See the [Makefile](Makefile) for all available targets.
 
 `make run` uses Debug build settings, preserves paths containing spaces, and stops
-on build or settings lookup failures. `make test-run` checks these behaviors
-without building or launching Barred.
+on build or settings lookup failures. `make test-run` checks those behaviors plus
+default/custom project and scheme arguments and Xcode failures for build, release,
+test, and clean. Fixtures use stubbed Xcode/open commands and disposable outputs;
+failed Xcode cleanup preserves the prior app and archive. Native tests retain the
+dedicated `BarredTests` scheme.
 
 The [command catalog](.clip/commands.md) describes each target's effects,
 including hosted tests that launch the app and packaging that can notarize it.
