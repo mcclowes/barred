@@ -41,7 +41,7 @@ From a clean checkout with the intended release changes committed, use the exist
 make bump TYPE=patch
 ```
 
-Use `minor` or `major` as appropriate. The [helper](../Scripts/bump-version.sh) updates `MARKETING_VERSION` in `project.yml`, creates a version commit, and creates an annotated `vX.Y.Z` tag. It doesn't update `CURRENT_PROJECT_VERSION`; update that build number before the bump when needed. Without `PUSH=--push`, the helper leaves the commit and tag local and prints the exact push commands.
+Use `minor` or `major` as appropriate. The [helper](../Scripts/bump-version.sh) updates `MARKETING_VERSION` in `project.yml`, creates a version commit, and creates an annotated `vX.Y.Z` tag. It requires exactly one double-quoted `major.minor.patch` setting with no leading zeroes. Missing, duplicate, malformed, or unsupported integer values and increment overflow fail before release progress or mutations. Spacing and trailing comments are preserved. It doesn't update `CURRENT_PROJECT_VERSION`; update that build number before the bump when needed. Without `PUSH=--push`, the helper leaves the commit and tag local and prints the exact push commands.
 
 The helper accepts only `major`, `minor`, or `patch`, followed by an optional `--push`. Unsupported or empty arguments and extra operands return usage on stderr with exit status 2 before reading or changing project metadata.
 

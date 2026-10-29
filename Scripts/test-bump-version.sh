@@ -189,4 +189,165 @@ run_make 'TYPE= minor' 'PUSH= --push'
 assert_bump 4.6.0 push
 barred_cases=$((barred_cases + 1))
 
-echo "Passed $barred_cases version-helper scenarios; no real Git mutations ran."
+barred_real_git=$(command -v git)
+mkdir -p "$barred_test_temp/home" "$barred_test_temp/tmp"
+
+metadata_env() {
+    env -i PATH=/usr/bin:/bin HOME="$barred_test_temp/home" TMPDIR="$barred_test_temp/tmp" \
+        BASH_ENV=/dev/null LC_ALL=C \
+        GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_COUNT=3 \
+        GIT_CONFIG_KEY_0=core.hooksPath GIT_CONFIG_VALUE_0=/dev/null \
+        GIT_CONFIG_KEY_1=commit.gpgSign GIT_CONFIG_VALUE_1=false \
+        GIT_CONFIG_KEY_2=tag.gpgSign GIT_CONFIG_VALUE_2=false \
+        GIT_AUTHOR_NAME=Fixture GIT_AUTHOR_EMAIL=fixture@example.com \
+        GIT_COMMITTER_NAME=Fixture GIT_COMMITTER_EMAIL=fixture@example.com "$@"
+}
+
+metadata_git() { metadata_env "$barred_real_git" -C "$barred_metadata_repo" "$@"; }
+
+metadata_document() {
+    printf 'settings:\n  MARKETING_VERSION: "%s"\n  CURRENT_PROJECT_VERSION: 78\n  SENTINEL: unchanged\n' "$1"
+}
+
+metadata_fixture() {
+    barred_metadata_dir=$(mktemp -d "$barred_test_temp/metadata project.XXXXXX")
+    barred_metadata_repo="$barred_metadata_dir/repo"
+    mkdir -p "$barred_metadata_repo/Scripts" "$barred_metadata_dir/bin"
+    printf '%s\n' "$1" > "$barred_metadata_repo/project.yml"
+    cp "$barred_test_source/Scripts/bump-version.sh" "$barred_metadata_repo/Scripts/"
+    cp "$barred_test_source/Makefile" "$barred_metadata_repo/"
+    cat > "$barred_metadata_dir/bin/git" <<'STUB'
+#!/bin/bash
+printf '<%s>' "$@" >> "$GIT_LOG"
+printf '\n' >> "$GIT_LOG"
+if [ "${1:-}" = push ]; then
+    echo 'Fixture blocks every push.' >&2
+    exit 97
+fi
+exec "$BARRED_REAL_GIT" "$@"
+STUB
+    chmod +x "$barred_metadata_dir/bin/git"
+    metadata_git -c init.defaultBranch=main init -q
+    metadata_git add project.yml Scripts/bump-version.sh Makefile
+    metadata_git commit -qm 'Fixture baseline'
+    metadata_git tag fixture-base
+    cp "$barred_metadata_repo/project.yml" "$barred_metadata_dir/before.yml"
+    metadata_git ls-files --stage -z > "$barred_metadata_dir/before-index"
+    barred_metadata_head=$(metadata_git rev-parse HEAD)
+    barred_metadata_tags=$(metadata_git tag --list)
+    barred_metadata_status=$(metadata_git status --porcelain=v1)
+}
+
+run_metadata() {
+    local entry=$1 bump=$2 mode=$3
+    local args=("$bump")
+    [ "$mode" != push ] || args+=(--push)
+    if [ "$entry" = make ]; then
+        args=("$barred_real_make" --no-print-directory bump "TYPE=$bump")
+        [ "$mode" != push ] || args+=(PUSH=--push)
+    else
+        args=(/bin/bash Scripts/bump-version.sh "${args[@]}")
+    fi
+    if (cd "$barred_metadata_repo" && metadata_env \
+        PATH="$barred_metadata_dir/bin:/usr/bin:/bin" BARRED_REAL_GIT="$barred_real_git" \
+        GIT_LOG="$barred_metadata_dir/git.log" "${args[@]}") \
+        > "$barred_metadata_dir/output" 2> "$barred_metadata_dir/error"; then
+        barred_metadata_result=0
+    else
+        barred_metadata_result=$?
+    fi
+}
+
+reject_metadata() {
+    local entry=$1 mode=$2 bump=$3 document=$4
+    metadata_fixture "$document"
+    run_metadata "$entry" "$bump" "$mode"
+    [ "$barred_metadata_result" != 0 ] || fail "Accepted invalid metadata ($entry/$mode/$bump); tags: $(metadata_git tag --list): $document"
+    grep -Eq 'Error:.*(MARKETING_VERSION|[Vv]ersion)' "$barred_metadata_dir/error" || fail 'Missing metadata diagnostic'
+    ! grep -q '^Bumping version:' "$barred_metadata_dir/output" || fail 'Invalid metadata emitted release progress'
+    cmp -s "$barred_metadata_repo/project.yml" "$barred_metadata_dir/before.yml" || fail 'Rejected metadata changed bytes'
+    [ "$(metadata_git rev-parse HEAD)" = "$barred_metadata_head" ] || fail 'Rejected metadata changed HEAD'
+    [ "$(metadata_git tag --list)" = "$barred_metadata_tags" ] || fail 'Rejected metadata changed tags'
+    [ "$(metadata_git status --porcelain=v1)" = "$barred_metadata_status" ] || fail 'Rejected metadata changed index/worktree state'
+    metadata_git ls-files --stage -z > "$barred_metadata_dir/after-index"
+    cmp -s "$barred_metadata_dir/before-index" "$barred_metadata_dir/after-index" || fail 'Rejected metadata changed logical index'
+    [ ! -s "$barred_metadata_dir/git.log" ] || fail 'Rejected metadata reached Git'
+    barred_cases=$((barred_cases + 1))
+}
+
+for entry in direct make; do
+    for mode in local push; do
+        for invalid in 4.5.bad 4.bad.6 bad.5.6 01.2.3 1.02.3 1.2.03 \
+            -1.2.3 1.2 1.2.3.4 1.2.3-beta 1.2.3+build '1+2.2.3' \
+            4.5.9223372036854775808 9223372036854775808.5.6 \
+            4.9223372036854775808.6 4.5.18446744073709551617; do
+            reject_metadata "$entry" "$mode" minor "$(metadata_document "$invalid")"
+        done
+        for document in \
+            'settings:' \
+            '  NOT_MARKETING_VERSION: "4.5.6"' \
+            '  # MARKETING_VERSION: "4.5.6"' \
+            '  MARKETING_VERSION: ""' \
+            '  MARKETING_VERSION: 4.5.6' \
+            '  MARKETING_VERSION: "4.5.6" junk' \
+            $'  MARKETING_VERSION: "4.5.6"\n  MARKETING_VERSION: "4.5.6"' \
+            $'  MARKETING_VERSION: "4.5.6"\n  MARKETING_VERSION:'; do
+            reject_metadata "$entry" "$mode" patch "$document"
+        done
+        reject_metadata "$entry" "$mode" major "$(metadata_document 4.bad.6)"
+        reject_metadata "$entry" "$mode" patch "$(metadata_document 4.5.18446744073709551617)"
+        for bump in major minor patch; do
+            case "$bump" in
+                major) version=9223372036854775807.2.3 ;;
+                minor) version=4.9223372036854775807.6 ;;
+                patch) version=4.5.9223372036854775807 ;;
+            esac
+            reject_metadata "$entry" "$mode" "$bump" "$(metadata_document "$version")"
+        done
+        metadata_fixture "$(metadata_document 4.5.6)"
+        rm "$barred_metadata_repo/project.yml"
+        barred_metadata_status=$(metadata_git status --porcelain=v1)
+        run_metadata "$entry" patch "$mode"
+        [ "$barred_metadata_result" != 0 ] || fail 'Missing project metadata was accepted'
+        grep -q 'Error:.*MARKETING_VERSION' "$barred_metadata_dir/error" || fail 'Missing project metadata diagnostic'
+        [ ! -e "$barred_metadata_repo/project.yml" ] || fail 'Recreated missing metadata'
+        [ "$(metadata_git rev-parse HEAD)" = "$barred_metadata_head" ] || fail 'Missing metadata changed HEAD'
+        [ "$(metadata_git tag --list)" = "$barred_metadata_tags" ] || fail 'Missing metadata changed tags'
+        [ "$(metadata_git status --porcelain=v1)" = "$barred_metadata_status" ] || fail 'Missing metadata changed index/worktree state'
+        metadata_git ls-files --stage -z > "$barred_metadata_dir/after-index"
+        cmp -s "$barred_metadata_dir/before-index" "$barred_metadata_dir/after-index" || fail 'Rejected metadata changed logical index'
+        [ ! -s "$barred_metadata_dir/git.log" ] || fail 'Missing metadata reached Git'
+        barred_cases=$((barred_cases + 1))
+    done
+    for scenario in \
+        'major 0.0.0 1.0.0' 'minor 0.0.0 0.1.0' 'patch 0.0.0 0.0.1' \
+        'major 9.5.6 10.0.0' 'minor 4.9.6 4.10.0' 'patch 4.5.9 4.5.10' \
+        'major 9223372036854775806.2.3 9223372036854775807.0.0' \
+        'minor 4.9223372036854775806.6 4.9223372036854775807.0' \
+        'patch 4.5.9223372036854775806 4.5.9223372036854775807' \
+        'major 1.9223372036854775807.9223372036854775807 2.0.0' \
+        'minor 9223372036854775807.0.9223372036854775807 9223372036854775807.1.0' \
+        'patch 9223372036854775807.9223372036854775807.0 9223372036854775807.9223372036854775807.1'; do
+        read -r bump version expected <<< "$scenario"
+        metadata_fixture "$(metadata_document "$version")"
+        run_metadata "$entry" "$bump" local
+        [ "$barred_metadata_result" = 0 ] || fail "Valid metadata rejected: $scenario"
+        metadata_document "$expected" > "$barred_metadata_dir/expected.yml"
+        cmp -s "$barred_metadata_repo/project.yml" "$barred_metadata_dir/expected.yml" || fail 'Valid bump changed unrelated metadata'
+        [ "$(metadata_git rev-parse HEAD^)" = "$barred_metadata_head" ] || fail 'Valid bump did not create one commit'
+        [ "$(metadata_git cat-file -t "refs/tags/v$expected")" = tag ] || fail 'Version tag is not annotated'
+        [ "$(metadata_git rev-parse "refs/tags/v$expected^{}")" = "$(metadata_git rev-parse HEAD)" ] || fail 'Version tag has wrong target'
+        [ -z "$(metadata_git status --porcelain=v1)" ] || fail 'Valid bump left dirty metadata'
+        ! grep -q '<push>' "$barred_metadata_dir/git.log" || fail 'Local fixture requested push'
+        barred_cases=$((barred_cases + 1))
+    done
+    metadata_fixture $'settings:\n  NOT_MARKETING_VERSION: "99.99.99"\n  # MARKETING_VERSION: "88.88.88"\n  MARKETING_VERSION  :   "4.5.6"   # Keep "quoted" notes\n  CURRENT_PROJECT_VERSION: 78'
+    run_metadata "$entry" patch local
+    [ "$barred_metadata_result" = 0 ] || fail 'Valid spacing/comments were rejected'
+    printf '%s\n' $'settings:\n  NOT_MARKETING_VERSION: "99.99.99"\n  # MARKETING_VERSION: "88.88.88"\n  MARKETING_VERSION  :   "4.5.7"   # Keep "quoted" notes\n  CURRENT_PROJECT_VERSION: 78' > "$barred_metadata_dir/expected.yml"
+    cmp -s "$barred_metadata_repo/project.yml" "$barred_metadata_dir/expected.yml" || fail 'Valid spacing/comments changed'
+    [ -z "$(metadata_git status --porcelain=v1)" ] || fail 'Spaced metadata did not leave a clean fixture'
+    barred_cases=$((barred_cases + 1))
+done
+
+echo "Passed $barred_cases version-helper scenarios; real Git mutations stayed in disposable fixtures and pushes were blocked."

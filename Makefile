@@ -36,7 +36,7 @@ test-build-helper: ## Check build helper with stubbed signing tools
 test-cask-helper: ## Check release architecture metadata with a stubbed inspector
 	bash Scripts/test-cask-architectures.sh
 
-test-bump-helper: ## Check version helper arguments with stubbed Git
+test-bump-helper: ## Check version arguments and metadata in isolated repositories
 	bash Scripts/test-bump-version.sh
 
 test-run: ## Check Xcode arguments and launch paths with stubs
