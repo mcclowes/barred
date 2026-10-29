@@ -2,7 +2,7 @@
 # Pre-commit hook: check formatting and lint staged Swift files
 
 # Only run if there are staged Swift files
-STAGED_SWIFT=$(git diff --cached --name-only --diff-filter=ACM | grep '\.swift$')
+STAGED_SWIFT=$(git diff --cached --name-only --diff-filter=ACMR -- '*.swift') || exit $?
 if [ -z "$STAGED_SWIFT" ]; then
     exit 0
 fi
