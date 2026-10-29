@@ -12,6 +12,7 @@ tools, without launching Barred or submitting a notarization request.
 - Version helper tests: `make test-bump-helper` - checks argument rejection and valid bumps with isolated metadata and stubbed Git #quick #safe #ci
 - Launch helper tests: `make test-run` - checks development signing arguments, Debug launch paths, and failure handling with stubbed build and launch tools #quick #safe #ci
 - Release paths: `make test-release-paths` - checks both release settings lookups with fake Xcode #quick #safe #ci
+- Hook installer tests: `make test-install-hooks` - checks Git-resolved destinations, replacement failures, and signal cleanup in disposable repositories #quick #safe #ci
 - Shell syntax: `for script in Scripts/*.sh; do bash -n "$script" || exit; done` #quick #safe #ci
 - Shell lint: `shellcheck Scripts/*.sh` #quick #safe #ci
 - Swift format check: `make format-check` - checks formatting without changing source #quick #safe
@@ -36,7 +37,7 @@ App launch can request Accessibility access and rearrange menu bar items.
 - Format source: `make format` - rewrites Swift source and tests #quick #writes
 - Fix Swift lint: `make lint-fix` - applies available source fixes #quick #writes
 - Generate project: `make generate` - rewrites Barred.xcodeproj from project.yml #quick #writes
-- Install commit hook: `make install-hooks` - replaces this checkout's pre-commit hook #quick #writes
+- Install commit hook: `make install-hooks` - replaces the hook at Git's active destination, including core.hooksPath; linked worktrees normally share the default hook; preparation failures preserve the previous hook #quick #writes
 - Clean build output: `make clean` - removes Xcode output and .build/Barred.app and .build/Barred.zip #safe
 
 ## Release actions

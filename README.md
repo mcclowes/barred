@@ -100,6 +100,13 @@ without building or launching Barred.
 The [command catalog](.clip/commands.md) describes each target's effects,
 including hosted tests that launch the app and packaging that can notarize it.
 
+`make install-hooks` replaces the pre-commit hook at Git's active destination,
+including a configured `core.hooksPath`. It stages the replacement beside the
+destination, leaving the previous hook intact if copying, permissions, or promotion
+fails. Linked worktrees normally share the default hook. `make test-install-hooks`
+checks installation and failures in disposable repositories without changing your
+installed hook.
+
 `make app` preserves Xcode's built version, build number, and resolved app metadata. Set `VERSION` or `BUILD_NUMBER` to override only that value for packaging.
 
 The helper prepares and signs the app in temporary staging, validates the ZIP,

@@ -19,7 +19,7 @@ jobs:
         run: |
           for script in Scripts/*.sh; do bash -n "$script"; done
           shellcheck Scripts/*.sh
-          make test-build-helper test-cask-helper test-bump-helper test-run test-release-paths
+          make test-build-helper test-cask-helper test-bump-helper test-run test-release-paths test-install-hooks
 
       - name: Lint
         run: make lint

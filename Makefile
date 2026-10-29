@@ -3,7 +3,7 @@ PROJECT = Barred.xcodeproj
 DEV_CODE_SIGN_IDENTITY ?= Apple Development
 DEV_DEVELOPMENT_TEAM ?= BCB43KG62T
 
-.PHONY: build release app run test test-build-helper test-cask-helper test-bump-helper test-run test-release-paths format format-check lint clean generate install-hooks bump help
+.PHONY: build release app run test test-build-helper test-cask-helper test-bump-helper test-run test-release-paths test-install-hooks format format-check lint clean generate install-hooks bump help
 
 ## Build
 
@@ -45,6 +45,9 @@ test-run: ## Check launch paths with stubbed build and launch tools
 test-release-paths: ## Check release settings lookups with fake Xcode
 	bash Scripts/test-release-paths.sh
 
+test-install-hooks: ## Check hook installation in disposable repositories
+	bash Scripts/test-install-hooks.sh
+
 ## Lint & format
 
 format: ## Auto-format Swift files (swiftformat)
@@ -62,9 +65,19 @@ lint-fix: ## Auto-fix SwiftLint violations
 ## Hooks
 
 install-hooks: ## Install git pre-commit hook
-	cp Scripts/pre-commit .git/hooks/pre-commit
-	chmod +x .git/hooks/pre-commit
-	@echo "Pre-commit hook installed."
+	@set -e; \
+	hook_dir=$$(git rev-parse --path-format=absolute --git-path hooks); \
+	test -n "$$hook_dir"; \
+	hook="$$hook_dir/pre-commit"; \
+	mkdir -p "$$hook_dir"; \
+	if [ -d "$$hook" ]; then echo 'Hook destination is a directory.' >&2; exit 1; fi; \
+	staged=$$(mktemp "$$hook_dir/.pre-commit.XXXXXX"); \
+	trap 'rm -f "$$staged"' 0; \
+	trap 'exit 129' HUP; trap 'exit 130' INT; trap 'exit 143' TERM; \
+	cp Scripts/pre-commit "$$staged"; \
+	chmod +x "$$staged"; \
+	mv -f "$$staged" "$$hook"; \
+	echo "Pre-commit hook installed."
 
 ## Version
 
