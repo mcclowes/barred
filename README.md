@@ -78,7 +78,7 @@ make app                   # build .app bundle
 make run                   # build and run with Apple Development signing
 make test                  # run tests
 make test-build-helper     # check packaging with stubbed build/signing tools
-make test-bump-helper      # check version arguments and metadata in disposable repositories
+make test-bump-helper      # check version prerequisites in disposable repositories
 make test-run              # check Make arguments and launch paths with stubs
 make test-release-paths    # check release path lookups with fake Xcode
 ```

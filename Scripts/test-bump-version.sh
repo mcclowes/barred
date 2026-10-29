@@ -50,6 +50,7 @@ settings:
 PROJECT
     cmp -s "$barred_fixture/project.yml" "$barred_fixture/expected.yml" || fail 'Wrong version metadata'
     cat > "$barred_fixture/expected-git.log" <<GIT
+<--no-optional-locks><status><--porcelain=v1><--untracked-files=all>
 <add><project.yml>
 <commit><-m><Bump version to $expected_version>
 <tag><-a><v$expected_version><-m><Release v$expected_version>
@@ -205,6 +206,11 @@ metadata_env() {
 
 metadata_git() { metadata_env "$barred_real_git" -C "$barred_metadata_repo" "$@"; }
 
+assert_status_only() {
+    printf '%s\n' '<--no-optional-locks><status><--porcelain=v1><--untracked-files=all>' > "$barred_metadata_dir/expected-status.log"
+    cmp -s "$barred_metadata_dir/git.log" "$barred_metadata_dir/expected-status.log" || fail 'Rejected input reached Git beyond read-only status'
+}
+
 metadata_document() {
     printf 'settings:\n  MARKETING_VERSION: "%s"\n  CURRENT_PROJECT_VERSION: 78\n  SENTINEL: unchanged\n' "$1"
 }
@@ -223,6 +229,10 @@ printf '\n' >> "$GIT_LOG"
 if [ "${1:-}" = push ]; then
     echo 'Fixture blocks every push.' >&2
     exit 97
+fi
+if [ "${1:-}" = --no-optional-locks ] && [ "${2:-}" = status ] && [ "${BARRED_STATUS_FAILURE:-0}" != 0 ]; then
+    printf '%s' "${BARRED_STATUS_PARTIAL:-}"
+    exit "$BARRED_STATUS_FAILURE"
 fi
 exec "$BARRED_REAL_GIT" "$@"
 STUB
@@ -250,6 +260,7 @@ run_metadata() {
     fi
     if (cd "$barred_metadata_repo" && metadata_env \
         PATH="$barred_metadata_dir/bin:/usr/bin:/bin" BARRED_REAL_GIT="$barred_real_git" \
+        BARRED_STATUS_FAILURE="${barred_status_failure:-0}" BARRED_STATUS_PARTIAL="${barred_status_partial:-}" \
         GIT_LOG="$barred_metadata_dir/git.log" "${args[@]}") \
         > "$barred_metadata_dir/output" 2> "$barred_metadata_dir/error"; then
         barred_metadata_result=0
@@ -271,9 +282,97 @@ reject_metadata() {
     [ "$(metadata_git status --porcelain=v1)" = "$barred_metadata_status" ] || fail 'Rejected metadata changed index/worktree state'
     metadata_git ls-files --stage -z > "$barred_metadata_dir/after-index"
     cmp -s "$barred_metadata_dir/before-index" "$barred_metadata_dir/after-index" || fail 'Rejected metadata changed logical index'
-    [ ! -s "$barred_metadata_dir/git.log" ] || fail 'Rejected metadata reached Git'
+    assert_status_only
     barred_cases=$((barred_cases + 1))
 }
+
+reject_dirty_worktree() {
+    local entry=$1 mode=$2 state=$3 file
+    metadata_fixture "$(metadata_document 4.5.6)"
+    printf 'Original notes\n' > "$barred_metadata_repo/notes.txt"
+    metadata_git add notes.txt
+    metadata_git commit -qm 'Fixture notes'
+    barred_status_failure=0
+    barred_status_partial=''
+    case "$state" in
+        staged) printf 'Staged notes\n' >> "$barred_metadata_repo/notes.txt"; metadata_git add notes.txt ;;
+        unstaged) printf 'Unstaged notes\n' >> "$barred_metadata_repo/notes.txt" ;;
+        staged-project) printf '# Staged project note\n' >> "$barred_metadata_repo/project.yml"; metadata_git add project.yml ;;
+        unstaged-project) printf '# Unstaged project note\n' >> "$barred_metadata_repo/project.yml" ;;
+        untracked)
+            mkdir "$barred_metadata_repo/drafts"
+            printf 'Private notes\n' > "$barred_metadata_repo/drafts/private notes.txt"
+            metadata_git config status.showUntrackedFiles no
+            ;;
+        mixed)
+            printf 'Staged notes\n' >> "$barred_metadata_repo/notes.txt"
+            metadata_git add notes.txt
+            printf 'Unstaged notes\n' >> "$barred_metadata_repo/notes.txt"
+            printf '# Unstaged project note\n' >> "$barred_metadata_repo/project.yml"
+            mkdir "$barred_metadata_repo/drafts"
+            printf 'Private notes\n' > "$barred_metadata_repo/drafts/private notes.txt"
+            ;;
+        status-failure|partial-status-failure)
+            rm "$barred_metadata_repo/project.yml"
+            barred_status_failure=42
+            [ "$state" != partial-status-failure ] || barred_status_partial=' M project.yml'
+            ;;
+    esac
+    mkdir "$barred_metadata_dir/before-files"
+    for file in project.yml notes.txt Makefile Scripts/bump-version.sh 'drafts/private notes.txt'; do
+        if [ -f "$barred_metadata_repo/$file" ]; then
+            mkdir -p "$barred_metadata_dir/before-files/$(dirname "$file")"
+            cp -p "$barred_metadata_repo/$file" "$barred_metadata_dir/before-files/$file"
+        fi
+    done
+    metadata_git --no-optional-locks status --porcelain=v1 --untracked-files=all > "$barred_metadata_dir/status.before"
+    metadata_git --no-optional-locks diff --binary > "$barred_metadata_dir/unstaged.before"
+    metadata_git --no-optional-locks diff --cached --binary > "$barred_metadata_dir/staged.before"
+    metadata_git rev-parse HEAD > "$barred_metadata_dir/head.before"
+    metadata_git tag --list > "$barred_metadata_dir/tags.before"
+    cp "$barred_metadata_repo/.git/index" "$barred_metadata_dir/index.before"
+    cp "$barred_metadata_repo/.git/config" "$barred_metadata_dir/config.before"
+
+    run_metadata "$entry" patch "$mode"
+
+    [ "$barred_metadata_result" != 0 ] || fail "Accepted $state worktree ($entry/$mode); version commit includes: $(metadata_git show --pretty= --name-only HEAD)"
+    cmp -s "$barred_metadata_repo/.git/index" "$barred_metadata_dir/index.before" || fail 'Rejected bump changed index bytes'
+    cmp -s "$barred_metadata_repo/.git/config" "$barred_metadata_dir/config.before" || fail 'Rejected bump changed Git configuration'
+    if [ "$barred_status_failure" != 0 ]; then
+        grep -q 'Could not read Git worktree status' "$barred_metadata_dir/error" || fail 'Git failure did not stop before metadata'
+    else
+        grep -q 'clean.*worktree' "$barred_metadata_dir/error" || fail 'Missing dirty-worktree diagnostic'
+    fi
+    ! grep -q '^Bumping version:' "$barred_metadata_dir/output" || fail 'Rejected worktree emitted release progress'
+    for file in project.yml notes.txt Makefile Scripts/bump-version.sh 'drafts/private notes.txt'; do
+        if [ -f "$barred_metadata_dir/before-files/$file" ]; then
+            cmp -s "$barred_metadata_repo/$file" "$barred_metadata_dir/before-files/$file" || fail "Changed fixture file: $file"
+            [ "$(stat -f '%Lp' "$barred_metadata_repo/$file")" = "$(stat -f '%Lp' "$barred_metadata_dir/before-files/$file")" ] || fail "Changed fixture mode: $file"
+        else
+            [ ! -e "$barred_metadata_repo/$file" ] || fail "Created unexpected fixture file: $file"
+        fi
+    done
+    metadata_git --no-optional-locks status --porcelain=v1 --untracked-files=all > "$barred_metadata_dir/status.after"
+    metadata_git --no-optional-locks diff --binary > "$barred_metadata_dir/unstaged.after"
+    metadata_git --no-optional-locks diff --cached --binary > "$barred_metadata_dir/staged.after"
+    metadata_git rev-parse HEAD > "$barred_metadata_dir/head.after"
+    metadata_git tag --list > "$barred_metadata_dir/tags.after"
+    for file in status unstaged staged head tags; do
+        cmp -s "$barred_metadata_dir/$file.before" "$barred_metadata_dir/$file.after" || fail "Rejected bump changed $file"
+    done
+    assert_status_only
+    barred_status_failure=0
+    barred_status_partial=''
+    barred_cases=$((barred_cases + 1))
+}
+
+for entry in direct make; do
+    for mode in local push; do
+        for state in staged unstaged staged-project unstaged-project untracked mixed status-failure partial-status-failure; do
+            reject_dirty_worktree "$entry" "$mode" "$state"
+        done
+    done
+done
 
 for entry in direct make; do
     for mode in local push; do
@@ -306,6 +405,10 @@ for entry in direct make; do
         done
         metadata_fixture "$(metadata_document 4.5.6)"
         rm "$barred_metadata_repo/project.yml"
+        metadata_git add -u
+        metadata_git commit -qm 'Fixture without metadata'
+        barred_metadata_head=$(metadata_git rev-parse HEAD)
+        metadata_git ls-files --stage -z > "$barred_metadata_dir/before-index"
         barred_metadata_status=$(metadata_git status --porcelain=v1)
         run_metadata "$entry" patch "$mode"
         [ "$barred_metadata_result" != 0 ] || fail 'Missing project metadata was accepted'
@@ -316,7 +419,7 @@ for entry in direct make; do
         [ "$(metadata_git status --porcelain=v1)" = "$barred_metadata_status" ] || fail 'Missing metadata changed index/worktree state'
         metadata_git ls-files --stage -z > "$barred_metadata_dir/after-index"
         cmp -s "$barred_metadata_dir/before-index" "$barred_metadata_dir/after-index" || fail 'Rejected metadata changed logical index'
-        [ ! -s "$barred_metadata_dir/git.log" ] || fail 'Missing metadata reached Git'
+        assert_status_only
         barred_cases=$((barred_cases + 1))
     done
     for scenario in \

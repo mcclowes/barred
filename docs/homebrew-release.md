@@ -47,6 +47,8 @@ The helper accepts only `major`, `minor`, or `patch`, followed by an optional `-
 
 The Make target forwards each parsed `TYPE` and `PUSH` value as one quoted argument. It omits an empty `PUSH`; any nonempty value must be exactly `--push`. Values follow Make's normal assignment whitespace rules.
 
+After argument validation, the helper checks Git status before reading version metadata. Staged, unstaged, and untracked changes stop the bump, even when Git normally hides untracked files. A failed status lookup also stops it. Rejection preserves files, the index, HEAD, and tags.
+
 Review the version commit and tag, then push the release commit and that specific tag when ready. The tag must match the app's `MARKETING_VERSION`: the workflow derives the cask version from the tag and the app version from `project.yml`. Pushing any `v*` tag starts the release workflow. `make bump TYPE=patch PUSH=--push` also pushes immediately, so use the local-only form when reviewing first.
 
 ## What the workflow publishes

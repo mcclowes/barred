@@ -19,6 +19,13 @@ version_error() {
   exit 1
 }
 
+if ! WORKTREE_STATUS=$(git --no-optional-locks status --porcelain=v1 --untracked-files=all); then
+  version_error 'Could not read Git worktree status.'
+fi
+if [[ -n "$WORKTREE_STATUS" ]]; then
+  version_error 'Version bumps require a clean Git worktree, including untracked files.'
+fi
+
 VERSION_SETTINGS=$(awk '
   /^[[:space:]]*MARKETING_VERSION[[:space:]]*:/ { count++; setting = $0 }
   END { print count + 0; if (count == 1) print setting }
