@@ -49,6 +49,12 @@ The Make target forwards each parsed `TYPE` and `PUSH` value as one quoted argum
 
 After argument validation, the helper checks Git status before reading version metadata. Staged, unstaged, and untracked changes stop the bump, even when Git normally hides untracked files. A failed status lookup also stops it. Rejection preserves files, the index, HEAD, and tags.
 
+Before changing the version, the helper checks the exact next local release tag.
+Existing lightweight or annotated tags and failed lookups stop the bump without
+changing metadata, HEAD, the index, or existing tags. This requires Git with
+[`show-ref --exists`](https://git-scm.com/docs/git-show-ref) support; unsupported
+Git versions also stop before changes. The preflight makes no remote requests.
+
 Review the version commit and tag, then push the release commit and that specific tag when ready. The tag must match the app's `MARKETING_VERSION`: the workflow derives the cask version from the tag and the app version from `project.yml`. Pushing any `v*` tag starts the release workflow. `make bump TYPE=patch PUSH=--push` also pushes immediately, so use the local-only form when reviewing first.
 
 ## What the workflow publishes

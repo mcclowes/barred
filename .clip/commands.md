@@ -9,7 +9,7 @@ tools, without launching Barred or submitting a notarization request.
 
 - Packaging helper tests: `make test-build-helper` - checks metadata, signing arguments, preparation failures, promotion rollback, handled signals, recovery backups, and dummy notarization with isolated fixtures #quick #safe #ci
 - Cask helper tests: `make test-cask-helper` - checks release architecture detection with a stubbed inspector #quick #safe #ci
-- Version helper tests: `make test-bump-helper` - checks clean worktrees, direct-helper and literal Make arguments, metadata, integer boundaries, and valid bumps in disposable repositories with blocked pushes #quick #safe #ci
+- Version helper tests: `make test-bump-helper` - checks clean worktrees, direct-helper and literal Make arguments, metadata, integer boundaries, local tag collisions, lookup failures, and valid bumps in disposable repositories with blocked pushes #quick #safe #ci
 - Make and launch tests: `make test-run` - checks project/scheme arguments, development signing, Debug launch paths, failures, and cleanup with stubbed tools and disposable outputs #quick #safe #ci
 - Release paths: `make test-release-paths` - checks both release settings lookups with fake Xcode #quick #safe #ci
 - Hook installer tests: `make test-install-hooks` - checks Git-resolved destinations, replacement failures, and signal cleanup in disposable repositories #quick #safe #ci

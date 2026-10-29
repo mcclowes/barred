@@ -23,6 +23,7 @@ PROJECT
 #!/bin/bash
 printf '<%s>' "$@" >> "$GIT_LOG"
 printf '\n' >> "$GIT_LOG"
+if [ "${1:-}" = show-ref ] && [ "${2:-}" = --exists ]; then exit 2; fi
 exit "${GIT_STATUS:-97}"
 STUB
     chmod +x "$barred_fixture/bin/git"
@@ -51,6 +52,7 @@ PROJECT
     cmp -s "$barred_fixture/project.yml" "$barred_fixture/expected.yml" || fail 'Wrong version metadata'
     cat > "$barred_fixture/expected-git.log" <<GIT
 <--no-optional-locks><status><--porcelain=v1><--untracked-files=all>
+<show-ref><--exists><refs/tags/v$expected_version>
 <add><project.yml>
 <commit><-m><Bump version to $expected_version>
 <tag><-a><v$expected_version><-m><Release v$expected_version>
@@ -234,6 +236,11 @@ if [ "${1:-}" = --no-optional-locks ] && [ "${2:-}" = status ] && [ "${BARRED_ST
     printf '%s' "${BARRED_STATUS_PARTIAL:-}"
     exit "$BARRED_STATUS_FAILURE"
 fi
+if [ "${1:-}" = show-ref ] && [ "${2:-}" = --exists ] && [ "${BARRED_TAG_FAILURE:-0}" != 0 ]; then
+    printf '%s' "${BARRED_TAG_PARTIAL:-}"
+    echo 'Fixture tag lookup failed.' >&2
+    exit "$BARRED_TAG_FAILURE"
+fi
 exec "$BARRED_REAL_GIT" "$@"
 STUB
     chmod +x "$barred_metadata_dir/bin/git"
@@ -261,6 +268,7 @@ run_metadata() {
     if (cd "$barred_metadata_repo" && metadata_env \
         PATH="$barred_metadata_dir/bin:/usr/bin:/bin" BARRED_REAL_GIT="$barred_real_git" \
         BARRED_STATUS_FAILURE="${barred_status_failure:-0}" BARRED_STATUS_PARTIAL="${barred_status_partial:-}" \
+        BARRED_TAG_FAILURE="${barred_tag_failure:-0}" BARRED_TAG_PARTIAL="${barred_tag_partial:-}" \
         GIT_LOG="$barred_metadata_dir/git.log" "${args[@]}") \
         > "$barred_metadata_dir/output" 2> "$barred_metadata_dir/error"; then
         barred_metadata_result=0
@@ -366,6 +374,65 @@ reject_dirty_worktree() {
     barred_cases=$((barred_cases + 1))
 }
 
+reject_release_tag() {
+    local entry=$1 mode=$2 bump=$3 expected=$4 scenario=$5 file
+    metadata_fixture "$(metadata_document 4.5.6)"
+    barred_tag_failure=0
+    barred_tag_partial=''
+    case "$scenario" in
+        lightweight|packed-lightweight) metadata_git tag "v$expected" ;;
+        annotated|packed-annotated) metadata_git tag -a "v$expected" -m 'Existing release' ;;
+        lookup-error|partial-lookup-error)
+            barred_tag_failure=1
+            [ "$scenario" != partial-lookup-error ] || barred_tag_partial='partial lookup output'
+            ;;
+        lookup-fatal) barred_tag_failure=128 ;;
+        unsupported-lookup) barred_tag_failure=129 ;;
+    esac
+    case "$scenario" in packed-*) metadata_git pack-refs --all --prune ;; esac
+    cp -p "$barred_metadata_repo/project.yml" "$barred_metadata_dir/tag-project.before"
+    cp "$barred_metadata_repo/.git/index" "$barred_metadata_dir/tag-index.before"
+    cp "$barred_metadata_repo/.git/config" "$barred_metadata_dir/tag-config.before"
+    metadata_git rev-parse HEAD > "$barred_metadata_dir/tag-head.before"
+    metadata_git for-each-ref --format='%(refname) %(objectname)' > "$barred_metadata_dir/tag-refs.before"
+    metadata_git --no-optional-locks status --porcelain=v1 --untracked-files=all > "$barred_metadata_dir/tag-status.before"
+
+    run_metadata "$entry" "$bump" "$mode"
+
+    [ "$barred_metadata_result" != 0 ] || fail "Accepted release tag problem ($entry/$mode/$bump/$scenario)"
+    cmp -s "$barred_metadata_repo/project.yml" "$barred_metadata_dir/tag-project.before" || fail 'Tag rejection changed version metadata'
+    [ "$(stat -f '%Lp' "$barred_metadata_repo/project.yml")" = "$(stat -f '%Lp' "$barred_metadata_dir/tag-project.before")" ] || fail 'Tag rejection changed metadata mode'
+    cmp -s "$barred_metadata_repo/.git/index" "$barred_metadata_dir/tag-index.before" || fail 'Tag rejection changed index bytes'
+    cmp -s "$barred_metadata_repo/.git/config" "$barred_metadata_dir/tag-config.before" || fail 'Tag rejection changed Git configuration'
+    metadata_git rev-parse HEAD > "$barred_metadata_dir/tag-head.after"
+    metadata_git for-each-ref --format='%(refname) %(objectname)' > "$barred_metadata_dir/tag-refs.after"
+    metadata_git --no-optional-locks status --porcelain=v1 --untracked-files=all > "$barred_metadata_dir/tag-status.after"
+    for file in head refs status; do
+        cmp -s "$barred_metadata_dir/tag-$file.before" "$barred_metadata_dir/tag-$file.after" || fail "Tag rejection changed $file"
+    done
+    case "$scenario" in
+        *lookup*) grep -q "Could not inspect local release tag: v$expected" "$barred_metadata_dir/error" || fail 'Missing tag lookup error diagnostic' ;;
+        *) grep -q "Local release tag already exists: v$expected" "$barred_metadata_dir/error" || fail 'Missing existing tag diagnostic' ;;
+    esac
+    ! grep -q '^Bumping version:' "$barred_metadata_dir/output" || fail 'Tag rejection emitted release progress'
+    printf '%s\n' '<--no-optional-locks><status><--porcelain=v1><--untracked-files=all>' "<show-ref><--exists><refs/tags/v$expected>" > "$barred_metadata_dir/tag-expected.log"
+    cmp -s "$barred_metadata_dir/git.log" "$barred_metadata_dir/tag-expected.log" || fail 'Tag rejection reached mutating or remote Git commands'
+    barred_tag_failure=0
+    barred_tag_partial=''
+    barred_cases=$((barred_cases + 1))
+}
+
+for entry in direct make; do
+    for mode in local push; do
+        for bump in major minor patch; do
+            case "$bump" in major) expected=5.0.0 ;; minor) expected=4.6.0 ;; patch) expected=4.5.7 ;; esac
+            for scenario in lightweight annotated packed-lightweight packed-annotated lookup-error partial-lookup-error lookup-fatal unsupported-lookup; do
+                reject_release_tag "$entry" "$mode" "$bump" "$expected" "$scenario"
+            done
+        done
+    done
+done
+
 for entry in direct make; do
     for mode in local push; do
         for state in staged unstaged staged-project unstaged-project untracked mixed status-failure partial-status-failure; do
@@ -451,6 +518,35 @@ for entry in direct make; do
     cmp -s "$barred_metadata_repo/project.yml" "$barred_metadata_dir/expected.yml" || fail 'Valid spacing/comments changed'
     [ -z "$(metadata_git status --porcelain=v1)" ] || fail 'Spaced metadata did not leave a clean fixture'
     barred_cases=$((barred_cases + 1))
+done
+
+for entry in direct make; do
+    for bump in major minor patch; do
+        case "$bump" in major) expected=5.0.0 ;; minor) expected=4.6.0 ;; patch) expected=4.5.7 ;; esac
+        metadata_fixture "$(metadata_document 4.5.6)"
+        metadata_git branch "v$expected"
+        metadata_git tag "v$expected-old"
+        metadata_git tag "v${expected}0"
+        metadata_git tag -a "namespace/v$expected" -m 'Unrelated annotated release'
+        metadata_git pack-refs --all --prune
+        metadata_git for-each-ref --format='%(refname) %(objectname)' > "$barred_metadata_dir/nearby-refs.before"
+        run_metadata "$entry" "$bump" local
+        [ "$barred_metadata_result" = 0 ] || fail 'Similarly named refs blocked a valid version bump'
+        metadata_document "$expected" > "$barred_metadata_dir/expected.yml"
+        cmp -s "$barred_metadata_repo/project.yml" "$barred_metadata_dir/expected.yml" || fail 'Valid nearby-ref bump changed unrelated metadata'
+        [ "$(metadata_git rev-parse HEAD^)" = "$barred_metadata_head" ] || fail 'Nearby-ref bump did not create exactly one commit'
+        [ "$(metadata_git cat-file -t "refs/tags/v$expected")" = tag ] || fail 'Nearby-ref bump did not create an annotated tag'
+        [ "$(metadata_git rev-parse "refs/tags/v$expected^{}")" = "$(metadata_git rev-parse HEAD)" ] || fail 'Nearby-ref bump tagged the wrong commit'
+        metadata_git for-each-ref --format='%(refname) %(objectname)' refs/tags/ refs/heads/ > "$barred_metadata_dir/nearby-refs.after"
+        while IFS= read -r ref; do
+            case "$ref" in refs/heads/main\ *) continue ;; esac
+            grep -Fx "$ref" "$barred_metadata_dir/nearby-refs.after" >/dev/null || fail 'Valid bump changed an existing unrelated ref'
+        done < "$barred_metadata_dir/nearby-refs.before"
+        [ -z "$(metadata_git --no-optional-locks status --porcelain=v1 --untracked-files=all)" ] || fail 'Nearby-ref bump left dirty files'
+        ! grep -q '<push>' "$barred_metadata_dir/git.log" || fail 'Local nearby-ref fixture requested a push'
+        [ ! -s "$barred_metadata_dir/error" ] || fail 'Valid nearby-ref bump emitted errors'
+        barred_cases=$((barred_cases + 1))
+    done
 done
 
 echo "Passed $barred_cases version-helper scenarios; real Git mutations stayed in disposable fixtures and pushes were blocked."

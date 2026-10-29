@@ -59,6 +59,15 @@ fi
 NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
 TAG="v${NEW_VERSION}"
 
+if git show-ref --exists "refs/tags/$TAG" >/dev/null 2>&1; then
+  version_error "Local release tag already exists: $TAG"
+else
+  TAG_STATUS=$?
+  if [[ "$TAG_STATUS" != 2 ]]; then
+    version_error "Could not inspect local release tag: $TAG (git show-ref --exists exited $TAG_STATUS)."
+  fi
+fi
+
 echo "Bumping version: $CURRENT_VERSION -> $NEW_VERSION ($BUMP_TYPE)"
 
 # Update project.yml
