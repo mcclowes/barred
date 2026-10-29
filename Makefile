@@ -81,8 +81,14 @@ install-hooks: ## Install git pre-commit hook
 
 ## Version
 
+bump: export BARRED_BUMP_TYPE = $(TYPE)
+bump: export BARRED_BUMP_PUSH = $(PUSH)
 bump: ## Bump version (usage: make bump TYPE=patch|minor|major [PUSH=--push])
-	./Scripts/bump-version.sh $(TYPE) $(PUSH)
+	@if [ -n "$$BARRED_BUMP_PUSH" ]; then \
+		./Scripts/bump-version.sh "$$BARRED_BUMP_TYPE" "$$BARRED_BUMP_PUSH"; \
+	else \
+		./Scripts/bump-version.sh "$$BARRED_BUMP_TYPE"; \
+	fi
 
 ## Project
 

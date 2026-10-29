@@ -45,6 +45,8 @@ Use `minor` or `major` as appropriate. The [helper](../Scripts/bump-version.sh) 
 
 The helper accepts only `major`, `minor`, or `patch`, followed by an optional `--push`. Unsupported or empty arguments and extra operands return usage on stderr with exit status 2 before reading or changing project metadata.
 
+The Make target forwards each parsed `TYPE` and `PUSH` value as one quoted argument. It omits an empty `PUSH`; any nonempty value must be exactly `--push`. Values follow Make's normal assignment whitespace rules.
+
 Review the version commit and tag, then push the release commit and that specific tag when ready. The tag must match the app's `MARKETING_VERSION`: the workflow derives the cask version from the tag and the app version from `project.yml`. Pushing any `v*` tag starts the release workflow. `make bump TYPE=patch PUSH=--push` also pushes immediately, so use the local-only form when reviewing first.
 
 ## What the workflow publishes
